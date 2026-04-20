@@ -1,7 +1,7 @@
 import llm_clients
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from llm_clients import ChatRequest, ModelResponse
+from schemas import ChatRequest, CritiqueResponse, ModelResponse
 from graph import chat_graph
 
 app = FastAPI(title='Multi LLM MVP API')
@@ -25,16 +25,18 @@ def health() -> dict[str, str]:
 
 
 @app.post('/chat')
-async def chat(request: ChatRequest) -> dict[str, list[ModelResponse]]:
+async def chat(request: ChatRequest) -> dict:
     message = request.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail='Message cannot be empty.')
 
-    result = await chat_graph.ainvoke({'message': message, 'responses': []})
+    result = await chat_graph.ainvoke({'message': message, 'responses': [], 'critiques': []})
     normalized: list[ModelResponse] = result['responses']
+    critiques: list[CritiqueResponse] = result['critiques']
 
     llm_clients.initial_opinion = normalized
-    return {'responses': normalized}
+
+    return {'responses': normalized, 'critiques': critiques}
 
 
 @app.get('/results')

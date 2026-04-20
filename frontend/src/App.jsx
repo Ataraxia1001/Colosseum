@@ -49,7 +49,13 @@ export default function App() {
       }
 
       const data = await res.json()
-      setHistory(prev => [...prev, { role: 'assistant', responses: data.responses || [] }])
+      const responses = data.responses || []
+      const critiques = data.critiques || []
+      const responsesWithCritiques = responses.map(r => {
+        const critique = critiques.find(c => c.provider === r.provider)
+        return critique ? { ...r, critique: critique.content } : r
+      })
+      setHistory(prev => [...prev, { role: 'assistant', responses: responsesWithCritiques }])
     } catch (err) {
       setError(err.message || 'Something went wrong.')
     } finally {
@@ -130,6 +136,15 @@ export default function App() {
                           ? <p className="error-text">{item.error}</p>
                           : <pre>{item.content}</pre>
                         }
+                        {item.critique && (
+                          <>
+                            <hr style={{ margin: '12px 0', opacity: 0.4 }} />
+                            <div className="critique-section">
+                              <strong className="critique-label">Critique:</strong>
+                              <pre>{item.critique}</pre>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}

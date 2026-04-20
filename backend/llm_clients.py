@@ -3,7 +3,8 @@ from typing import Any
 
 import httpx
 from dotenv import load_dotenv
-from pydantic import BaseModel
+
+from schemas import ModelResponse
 
 load_dotenv()
 
@@ -15,18 +16,7 @@ OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4.1-mini')
 ANTHROPIC_MODEL = os.getenv('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
 
-initial_opinion: list['ModelResponse'] = []
-
-
-class ChatRequest(BaseModel):
-    message: str
-
-
-class ModelResponse(BaseModel):
-    model: str
-    provider: str
-    content: str | None = None
-    error: str | None = None
+initial_opinion: list[ModelResponse] = []
 
 
 async def call_openai(message: str) -> ModelResponse:
