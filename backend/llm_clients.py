@@ -1,6 +1,6 @@
+import asyncio
 import os
 from typing import Any
-
 import httpx
 from dotenv import load_dotenv
 
@@ -15,8 +15,25 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4.1-mini')
 ANTHROPIC_MODEL = os.getenv('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+GEMINI_TIMEOUT_SECONDS = float(os.getenv('GEMINI_TIMEOUT_SECONDS', '30'))
+GEMINI_MAX_RETRIES = int(os.getenv('GEMINI_MAX_RETRIES', '3'))
+GEMINI_RETRY_BACKOFF_SECONDS = float(os.getenv('GEMINI_RETRY_BACKOFF_SECONDS', '1.0'))
 
 initial_opinion: list[ModelResponse] = []
+
+
+def _gemini_error_message(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+        error = payload.get('error', {}) if isinstance(payload, dict) else {}
+        if isinstance(error, dict):
+            code = error.get('code')
+            status = error.get('status')
+            message = error.get('message')
+            return ' - '.join(str(part) for part in (code, status, message) if part)
+    except Exception:
+        pass
+    return (response.text or 'Unknown Gemini API error').strip()
 
 
 async def call_openai(message: str) -> ModelResponse:
@@ -115,10 +132,42 @@ async def call_gemini(message: str) -> ModelResponse:
         ]
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    transient_statuses = {429, 500, 502, 503, 504}
+    attempts = max(1, GEMINI_MAX_RETRIES)
+
+    async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
+        for attempt in range(1, attempts + 1):
+            try:
+                response = await client.post(url, json=payload)
+            except httpx.HTTPError as exc:
+                if attempt < attempts:
+                    await asyncio.sleep(GEMINI_RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1)))
+                    continue
+                return ModelResponse(
+                    provider='google',
+                    model=GEMINI_MODEL,
+                    error=f'Gemini network error after {attempts} attempts: {exc}',
+                )
+
+            if response.status_code == 200:
+                data = response.json()
+                break
+
+            if response.status_code in transient_statuses and attempt < attempts:
+                await asyncio.sleep(GEMINI_RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1)))
+                continue
+
+            return ModelResponse(
+                provider='google',
+                model=GEMINI_MODEL,
+                error=f'Gemini API error {response.status_code}: {_gemini_error_message(response)}',
+            )
+        else:
+            return ModelResponse(
+                provider='google',
+                model=GEMINI_MODEL,
+                error=f'Gemini request exhausted retries ({attempts}).',
+            )
 
     try:
         text = data['candidates'][0]['content']['parts'][0]['text']

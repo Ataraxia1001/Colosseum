@@ -14,6 +14,9 @@ const PROVIDER_COLORS = {
   google: '#4285f4',
 }
 
+const PROVIDER_ORDER = ['openai', 'anthropic', 'google']
+const PROVIDER_RANK = Object.fromEntries(PROVIDER_ORDER.map((provider, index) => [provider, index]))
+
 export default function App() {
   const [input, setInput] = useState('')
   const [history, setHistory] = useState([])
@@ -51,7 +54,11 @@ export default function App() {
       const data = await res.json()
       const responses = data.responses || []
       const critiques = data.critiques || []
-      const responsesWithCritiques = responses.map(r => {
+      const orderedResponses = [...responses].sort(
+        (a, b) => (PROVIDER_RANK[a.provider] ?? Number.MAX_SAFE_INTEGER)
+          - (PROVIDER_RANK[b.provider] ?? Number.MAX_SAFE_INTEGER)
+      )
+      const responsesWithCritiques = orderedResponses.map(r => {
         const critique = critiques.find(c => c.provider === r.provider)
         return critique ? { ...r, critique: critique.content } : r
       })
