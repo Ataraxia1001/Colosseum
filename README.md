@@ -7,7 +7,7 @@ A chat app where one user prompt is sent to OpenAI, Claude, and Gemini simultane
 ## Stack
 
 - **Frontend:** React + Vite
-- **Backend:** FastAPI + LangGraph, Pydantic
+- **Backend:** FastAPI + LangGraph + LangSmith, Pydantic
 - **AI Providers:** OpenAI, Anthropic Claude, Google Gemini
 
 ## Project structure
