@@ -90,6 +90,35 @@ npm install
 npm run dev
 ```
 
+## Run frontend + backend with Docker Compose
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+- Frontend: http://localhost:5173
+- Backend health: http://localhost:8000/health
+
+Environment variables for API providers can be passed from your shell before running Compose:
+
+```bash
+export OPENAI_API_KEY=...
+export ANTHROPIC_API_KEY=...
+export GEMINI_API_KEY=...
+```
+
+On PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="..."
+$env:ANTHROPIC_API_KEY="..."
+$env:GEMINI_API_KEY="..."
+```
+
 ## 3. API
 
 ### POST `/chat`
