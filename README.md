@@ -1,8 +1,8 @@
+<img src="./images/colosseum.png" alt="Colosseum" width="560" />
+
 # Colosseum
 
-<img src="debate_llm.png" alt="Debate LLM" width="500"/>
-
-A chat app where one user prompt is sent to OpenAI, Claude, and Gemini simultaneously. All three models give initial answers, then each model critiques the other two. Results are shown side by side in a React UI.
+Colosseum is a multi-LLM chat arena. One prompt is sent to OpenAI, Claude, and Gemini in parallel, each model gives an initial answer, and then each model critiques the other two. The results are displayed side by side in a React UI backed by FastAPI and LangGraph.
 
 ## Stack
 
@@ -19,18 +19,28 @@ Colosseum/
 │   ├── graph.py         # LangGraph 2-phase graph
 │   ├── llm_clients.py   # API clients for all 3 providers
 │   ├── schemas.py       # Pydantic request/response models
-│   └── pyproject.toml
+│   ├── pyproject.toml
+│   ├── .env             # API keys (copy from .env.example, not committed)
+│   ├── .env.example
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── styles.css
 │   ├── package.json
-│   └── vite.config.js
+│   ├── vite.config.js
+│   └── Dockerfile
+├── images/
+│   ├── colosseum.png
+│   └── debate_llm.png
+├── docker-compose.yml
 └── README.md
 ```
 
 ## How it works
+
+<img src="./images/debate_llm.png" alt="Debate Flow" width="420" />
 
 **Phase 1 — Initial responses (parallel)**
 All three models answer the user's question simultaneously.
@@ -38,7 +48,7 @@ All three models answer the user's question simultaneously.
 **Phase 2 — Cross-critique (parallel)**
 Each model receives the other two models' responses and critically evaluates them. All three critiques run in parallel.
 
-Both phases are orchestrated by a LangGraph `StateGraph`.
+Both phases are orchestrated by a LangGraph `StateGraph`, and the backend exposes the workflow through a FastAPI API consumed by the Vite frontend.
 
 ## 1. Backend setup
 
@@ -46,6 +56,7 @@ Both phases are orchestrated by a LangGraph `StateGraph`.
 cd backend
 uv sync
 cp .env.example .env
+# fill in your API keys in .env
 uv run uvicorn main:app --reload
 ```
 
@@ -90,36 +101,38 @@ npm install
 npm run dev
 ```
 
-## Run frontend + backend with Docker Compose
+The dev server listens on all interfaces (`host: true` in `vite.config.js`) at port 5173.
 
-From the project root:
+## 3. Docker Compose
+
+The recommended way to run both services together.
+
+**Step 1 — Create `backend/.env` with your API keys:**
+
+```bash
+cp backend/.env.example backend/.env
+# then edit backend/.env and fill in your keys
+```
+
+**Step 2 — Start both services:**
 
 ```bash
 docker compose up --build
 ```
 
-Then open:
-
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:8000/health
 
-Environment variables for API providers can be passed from your shell before running Compose:
+The backend image is built with `uv` — no `requirements.txt` needed, dependencies come from `pyproject.toml`.  
+`backend/.env` is read by Compose at runtime and injected as container environment variables. The file is never copied into the image.
+
+If the containers are already built, you can restart them with:
 
 ```bash
-export OPENAI_API_KEY=...
-export ANTHROPIC_API_KEY=...
-export GEMINI_API_KEY=...
+docker compose up
 ```
 
-On PowerShell:
-
-```powershell
-$env:OPENAI_API_KEY="..."
-$env:ANTHROPIC_API_KEY="..."
-$env:GEMINI_API_KEY="..."
-```
-
-## 3. API
+## 4. API
 
 ### POST `/chat`
 
