@@ -32,8 +32,9 @@ export default function InputBar({ input, setInput, onSubmit, loading }) {
           onClick={onSubmit}
           disabled={loading || !input.trim()}
           title="Send"
+          aria-label="Send"
         >
-          Send
+          <span className="send-btn-icon" aria-hidden="true">⚔</span>
         </button>
       </div>
       <p className="input-hint">Responses from OpenAI · Anthropic · Google</p>

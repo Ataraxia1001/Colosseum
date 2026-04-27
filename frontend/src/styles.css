@@ -355,24 +355,34 @@ body { background: var(--bg); }
 }
 
 .send-btn {
-  width: 55px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: #000;
-  border: none;
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #d8d8d8 100%);
+  color: #000000;
+  border: 1px solid #c8c8c8;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 6px 14px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
   line-height: 1;
 }
 
+.send-btn-icon {
+  font-size: 18px;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
 .send-btn:disabled {
-  opacity: 0.8;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
