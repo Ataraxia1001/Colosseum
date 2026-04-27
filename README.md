@@ -1,4 +1,4 @@
-<img src="./images/colosseum.png" alt="Colosseum" width="560" />
+<img src="./images/colosseum.png" alt="Colosseum" width="600" />
 
 # Colosseum
 
@@ -50,23 +50,18 @@ Each model receives the other two models' responses and critically evaluates the
 
 Both phases are orchestrated by a LangGraph `StateGraph`, and the backend exposes the workflow through a FastAPI API consumed by the Vite frontend.
 
-## 1. Backend setup
+## 1. Running with Docker Compose (recommended)
+
+> **Prerequisites:** Docker Desktop must be installed and **running** before executing any `docker` command.  
+> On **Windows** and **macOS**, Docker Desktop does not start automatically — open it from the Start menu / Applications and wait until the whale icon in the system tray shows "Docker Desktop is running".  
+> On **Linux**, the Docker daemon starts automatically as a system service, so no manual step is needed.
+
+**Step 1 — Create `backend/.env` with your API keys:**
 
 ```bash
-cd backend
-uv sync
-cp .env.example .env
-# fill in your API keys in .env
-uv run uvicorn main:app --reload
+cp backend/.env.example backend/.env
+# then edit backend/.env and fill in your keys
 ```
-
-If this is your first time using `uv`, install it first:
-
-```bash
-pip install uv
-```
-
-Set your API keys in `backend/.env`:
 
 ```env
 OPENAI_API_KEY=...
@@ -91,30 +86,7 @@ LANGSMITH_PROJECT=colosseum
 LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 ```
 
-Then restart the backend and send a request to `/chat`. You should see traces in your LangSmith project.
-
-## 2. Frontend setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The dev server listens on all interfaces (`host: true` in `vite.config.js`) at port 5173.
-
-## 3. Docker Compose
-
-The recommended way to run both services together.
-
-**Step 1 — Create `backend/.env` with your API keys:**
-
-```bash
-cp backend/.env.example backend/.env
-# then edit backend/.env and fill in your keys
-```
-
-**Step 2 — Start both services:**
+**Step 2 — Build and start both services:**
 
 ```bash
 docker compose up --build
@@ -126,11 +98,37 @@ docker compose up --build
 The backend image is built with `uv` — no `requirements.txt` needed, dependencies come from `pyproject.toml`.  
 `backend/.env` is read by Compose at runtime and injected as container environment variables. The file is never copied into the image.
 
-If the containers are already built, you can restart them with:
+If the containers are already built, you can restart them without rebuilding:
 
 ```bash
 docker compose up
 ```
+
+## 2. Manual setup — Backend
+
+```bash
+cd backend
+uv sync
+cp .env.example .env
+# fill in your API keys in .env
+uv run uvicorn main:app --reload
+```
+
+If this is your first time using `uv`, install it first:
+
+```bash
+pip install uv
+```
+
+## 3. Manual setup — Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The dev server listens on all interfaces (`host: true` in `vite.config.js`) at port 5173.
 
 ## 4. API
 
