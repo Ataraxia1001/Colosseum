@@ -1,8 +1,10 @@
 import operator
 from typing import Annotated, Callable, Coroutine, Any
 
+from deepeval.test_case import LLMTestCase
 from typing_extensions import TypedDict
 
+from eval import _make_GEval_metrics
 from schemas import CritiqueResponse, EvaluationResult, ModelResponse
 from llm_clients import (
     ANTHROPIC_MODEL,
@@ -12,6 +14,7 @@ from llm_clients import (
     call_gemini,
     call_openai,
 )
+from utils import _build_critique_prompt
 
 
 class ChatState(TypedDict):
@@ -43,19 +46,6 @@ async def gemini_node(state: ChatState) -> dict:
     except Exception as exc:
         result = ModelResponse(provider='google', model=GEMINI_MODEL, error=str(exc))
     return {'responses': [result]}
-
-
-def _build_critique_prompt(message: str, targets: list[ModelResponse]) -> str:
-    responses_text = '\n\n'.join(
-        f"{r.provider.upper()} ({r.model}):\n{r.content or f'[Error: {r.error}]'}"
-        for r in targets
-    )
-    return (
-        f'The following question was asked:\n"{message}"\n\n'
-        f'Here are the responses:\n\n{responses_text}\n\n'
-        'Critically evaluate these responses. Identify strengths, weaknesses, '
-        'inaccuracies, and areas for improvement in each.'
-    )
 
 
 def _make_critique_node(
@@ -91,9 +81,6 @@ def _make_critique_node(
 openai_critique_node = _make_critique_node('openai', ('anthropic', 'google'), call_openai, OPENAI_MODEL)
 claude_critique_node = _make_critique_node('anthropic', ('openai', 'google'), call_claude, ANTHROPIC_MODEL)
 gemini_critique_node = _make_critique_node('google', ('openai', 'anthropic'), call_gemini, GEMINI_MODEL)
-
-
-
 
 
 

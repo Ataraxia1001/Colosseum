@@ -1,11 +1,9 @@
-import os
-from uuid import uuid4
-
 import llm_clients
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse
 from graph import chat_graph
+from utils import build_chat_config
 
 
 app = FastAPI(title='Multi LLM MVP API')
@@ -17,26 +15,6 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
-
-
-def build_chat_config() -> dict:
-    run_config = {
-        'run_name': 'colosseum_chat',
-        'tags': ['colosseum', 'chat'],
-        'metadata': {
-            'endpoint': '/chat',
-        },
-        # Unique per request so traces are easier to distinguish in LangSmith.
-        'configurable': {'thread_id': f'chat-{uuid4()}'},
-    }
-
-    # LangSmith tracing can be enabled via LANGSMITH_TRACING in the environment.
-    if os.getenv('LANGSMITH_TRACING', '').lower() in {'1', 'true', 'yes'}:
-        project = os.getenv('LANGSMITH_PROJECT')
-        if project:
-            run_config['metadata']['langsmith_project'] = project
-
-    return run_config
 
 
 @app.get('/health')

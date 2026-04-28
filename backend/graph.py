@@ -12,6 +12,7 @@ from nodes import (
     gemini_critique_node,
     evaluation_node,
 )
+from utils import save_graph_image
 
 
 graph = StateGraph(ChatState)
@@ -45,17 +46,7 @@ graph.add_edge('evaluation', END)
 chat_graph = graph.compile()
 
 
-def save_graph_image(output_path: str | None = None) -> Path:
-    artifacts_dir = Path(__file__).parent / 'artifacts'
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
-
-    image_path = Path(output_path) if output_path else artifacts_dir / 'chat_graph.png'
-    png_data = chat_graph.get_graph().draw_mermaid_png()
-    image_path.write_bytes(png_data)
-    return image_path
-
-
 if __name__ == '__main__':
     # Run this file to see the graph image in the artifacts directory
-    saved_path = save_graph_image()
+    saved_path = save_graph_image(chat_graph)
     print(f'Saved graph image: {saved_path}')
