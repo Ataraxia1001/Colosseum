@@ -38,7 +38,11 @@ async def chat(request: ChatRequest) -> dict:
 
     llm_clients.initial_opinion = normalized
 
-    return {'responses': normalized, 'critiques': critiques, 'evaluations': evaluations}
+    return {
+        'responses': normalized,
+        'critiques': critiques,
+        'evaluations': evaluations,
+    }
 
 
 @app.get('/results')

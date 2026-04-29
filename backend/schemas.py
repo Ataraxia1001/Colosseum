@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
@@ -23,5 +23,9 @@ class CritiqueResponse(BaseModel):
 class EvaluationResult(BaseModel):
     provider: str
     component: str  # "response" or "critique"
-    scores: dict[str, float] = {}
+    scores: dict[str, float] = Field(default_factory=dict)
+    judge_model: str | None = None
+    contestants: list[str] = Field(default_factory=list)
+    winner: str | None = None
+    reason: str | None = None
     error: str | None = None

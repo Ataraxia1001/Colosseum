@@ -1,10 +1,8 @@
 import operator
 from typing import Annotated, Callable, Coroutine, Any
 
-from deepeval.test_case import LLMTestCase
 from typing_extensions import TypedDict
 
-from eval import _make_GEval_metrics
 from schemas import CritiqueResponse, EvaluationResult, ModelResponse
 from llm_clients import (
     ANTHROPIC_MODEL,
@@ -14,6 +12,7 @@ from llm_clients import (
     call_gemini,
     call_openai,
 )
+from eval import _evaluate_metrics, _evaluate_pairwise
 from utils import _build_critique_prompt
 
 
@@ -83,45 +82,22 @@ claude_critique_node = _make_critique_node('anthropic', ('openai', 'google'), ca
 gemini_critique_node = _make_critique_node('google', ('openai', 'anthropic'), call_gemini, GEMINI_MODEL)
 
 
-
-
 async def evaluation_node(state: ChatState) -> dict:
     """Use OpenAI as LLM-as-a-Judge to evaluate Claude and Gemini responses and critiques."""
-    evaluations: list[EvaluationResult] = []
+    chat_by_provider: dict[str, tuple[ModelResponse | None, CritiqueResponse | None]] = {
+        provider: (
+            next((r for r in state['responses'] if r.provider == provider), None),
+            next((c for c in state['critiques'] if c.provider == provider), None),
+        )
+        for provider in ('openai', 'anthropic', 'google')
+    }
+    metrics_evaluations = await _evaluate_metrics(
+        message=state['message'],
+        chat_by_provider=chat_by_provider,
+    )
+    pairwise_evaluations = await _evaluate_pairwise(
+        message=state['message'],
+        chat_by_provider=chat_by_provider,
+    )
 
-    for provider in ('anthropic', 'google'):
-        response = next((r for r in state['responses'] if r.provider == provider), None)
-        critique = next((c for c in state['critiques'] if c.provider == provider), None)
-
-        for component, content in [
-            ('response', response.content if response else None),
-            ('critique', critique.content if critique else None),
-        ]:
-            if not content:
-                evaluations.append(EvaluationResult(
-                    provider=provider,
-                    component=component,
-                    error='No content available to evaluate',
-                ))
-                continue
-
-            test_case = LLMTestCase(input=state['message'], actual_output=content)
-            metrics = _make_GEval_metrics(OPENAI_MODEL)
-            scores: dict[str, float] = {}
-            metric_errors: dict[str, str] = {}
-
-            for metric_name, metric in metrics.items():
-                try:
-                    await metric.a_measure(test_case)
-                    scores[metric_name] = metric.score
-                except Exception as exc:
-                    metric_errors[metric_name] = str(exc)
-
-            evaluations.append(EvaluationResult(
-                provider=provider,
-                component=component,
-                scores=scores,
-                error='; '.join(f'{k}: {v}' for k, v in metric_errors.items()) or None,
-            ))
-
-    return {'evaluations': evaluations}
+    return {'evaluations': metrics_evaluations + pairwise_evaluations}
