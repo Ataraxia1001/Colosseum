@@ -43,7 +43,7 @@ def _build_critique_prompt(message: str, targets: list[ModelResponse]) -> str:
 
 
 def save_graph_image(graph, output_path: str | None = None) -> Path:
-    artifacts_dir = Path(__file__).parent / 'artifacts'
+    artifacts_dir = Path(__file__).parent / 'arena_graph' / 'artifacts'
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     image_path = Path(output_path) if output_path else artifacts_dir / 'chat_graph.png'

@@ -77,27 +77,43 @@ def _make_critique_node(
     return critique_node
 
 
+def _make_evaluation_node(judge_provider: str, judge_model: str):
+    async def evaluation_node(state: ChatState) -> dict:
+        chat_by_provider: dict[str, tuple[ModelResponse | None, CritiqueResponse | None]] = {
+            provider: (
+                next((r for r in state['responses'] if r.provider == provider), None),
+                next((c for c in state['critiques'] if c.provider == provider), None),
+            )
+            for provider in ('openai', 'anthropic', 'google')
+        }
+        evaluate_providers = tuple(
+            provider for provider in ('openai', 'anthropic', 'google') if provider != judge_provider
+        )
+        metrics_evaluations = await _evaluate_metrics(
+            message=state['message'],
+            chat_by_provider=chat_by_provider,
+            judge_provider=judge_provider,
+            judge_model=judge_model,
+            evaluate_providers=evaluate_providers,
+        )
+        pairwise_evaluations = await _evaluate_pairwise(
+            message=state['message'],
+            chat_by_provider=chat_by_provider,
+            judge_provider=judge_provider,
+            judge_model=judge_model,
+            contestants=evaluate_providers,
+        )
+
+        return {'evaluations': metrics_evaluations + pairwise_evaluations}
+
+    return evaluation_node
+
+
 openai_critique_node = _make_critique_node('openai', ('anthropic', 'google'), call_openai, OPENAI_MODEL)
 claude_critique_node = _make_critique_node('anthropic', ('openai', 'google'), call_claude, ANTHROPIC_MODEL)
 gemini_critique_node = _make_critique_node('google', ('openai', 'anthropic'), call_gemini, GEMINI_MODEL)
 
 
-async def evaluation_node(state: ChatState) -> dict:
-    """Use OpenAI as LLM-as-a-Judge to evaluate Claude and Gemini responses and critiques."""
-    chat_by_provider: dict[str, tuple[ModelResponse | None, CritiqueResponse | None]] = {
-        provider: (
-            next((r for r in state['responses'] if r.provider == provider), None),
-            next((c for c in state['critiques'] if c.provider == provider), None),
-        )
-        for provider in ('openai', 'anthropic', 'google')
-    }
-    metrics_evaluations = await _evaluate_metrics(
-        message=state['message'],
-        chat_by_provider=chat_by_provider,
-    )
-    pairwise_evaluations = await _evaluate_pairwise(
-        message=state['message'],
-        chat_by_provider=chat_by_provider,
-    )
-
-    return {'evaluations': metrics_evaluations + pairwise_evaluations}
+openai_evaluation_node = _make_evaluation_node('openai', OPENAI_MODEL)
+claude_evaluation_node = _make_evaluation_node('anthropic', ANTHROPIC_MODEL)
+gemini_evaluation_node = _make_evaluation_node('google', GEMINI_MODEL)

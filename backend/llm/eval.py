@@ -1,14 +1,93 @@
 import asyncio
+from collections.abc import Iterable
 
 from deepeval.metrics import ArenaGEval, GEval
+from deepeval.models import AnthropicModel, DeepEvalBaseLLM, GeminiModel, GPTModel
 from deepeval.test_case import ArenaTestCase, Contestant, LLMTestCase, LLMTestCaseParams, SingleTurnParams
 
-from .llm_clients import ANTHROPIC_MODEL, GEMINI_MODEL, OPENAI_MODEL
+from .llm_clients import (
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_MODEL,
+    GEMINI_API_KEY,
+    GEMINI_MAX_RETRIES,
+    GEMINI_MODEL,
+    GEMINI_RETRY_BACKOFF_SECONDS,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+)
 from schemas import CritiqueResponse, EvaluationResult, ModelResponse
 
 
-def _make_GEval_metrics(judge_model: str) -> dict[str, GEval]:
-    """Return a fresh set of 4 custom GEval metrics backed by the given OpenAI model."""
+PROVIDER_LABELS = {
+    'openai': 'OpenAI',
+    'anthropic': 'Claude',
+    'google': 'Gemini',
+}
+
+TRANSIENT_EVAL_ERROR_MARKERS = (
+    ' 429 ',
+    ' 500 ',
+    ' 502 ',
+    ' 503 ',
+    ' 504 ',
+    'unavailable',
+    'high demand',
+    'rate limit',
+    'temporar',
+)
+
+def _provider_label(provider: str) -> str:
+    return PROVIDER_LABELS.get(provider, provider.capitalize())
+
+
+def _is_transient_eval_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in TRANSIENT_EVAL_ERROR_MARKERS)
+
+
+def _eval_retry_settings() -> tuple[int, float]:
+    return max(1, GEMINI_MAX_RETRIES), max(0.0, GEMINI_RETRY_BACKOFF_SECONDS)
+
+
+async def _run_with_transient_retries(coro_factory):
+    max_retries, backoff_seconds = _eval_retry_settings()
+    for attempt in range(1, max_retries + 1):
+        try:
+            return await coro_factory()
+        except Exception as exc:
+            if attempt >= max_retries or not _is_transient_eval_error(exc):
+                raise
+            await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
+
+    raise RuntimeError('Evaluation retries exhausted unexpectedly')
+
+
+async def _measure_with_retries(metric: GEval, test_case: LLMTestCase) -> float:
+    await _run_with_transient_retries(lambda: metric.a_measure(test_case))
+    return metric.score
+
+
+def _build_judge_llm(judge_provider: str, judge_model: str) -> DeepEvalBaseLLM:
+    if judge_provider == 'anthropic':
+        kwargs = {'model': judge_model}
+        if ANTHROPIC_API_KEY:
+            kwargs['api_key'] = ANTHROPIC_API_KEY
+        return AnthropicModel(**kwargs)
+
+    if judge_provider == 'google':
+        kwargs = {'model': judge_model}
+        if GEMINI_API_KEY:
+            kwargs['api_key'] = GEMINI_API_KEY
+        return GeminiModel(**kwargs)
+
+    kwargs = {'model': judge_model}
+    if OPENAI_API_KEY:
+        kwargs['api_key'] = OPENAI_API_KEY
+    return GPTModel(**kwargs)
+
+
+def _make_GEval_metrics(judge_model: DeepEvalBaseLLM) -> dict[str, GEval]:
+    """Return a fresh set of 4 custom GEval metrics backed by the given judge model."""
     shared_params = dict(
         evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
         model=judge_model,
@@ -52,11 +131,17 @@ def _make_GEval_metrics(judge_model: str) -> dict[str, GEval]:
     }
 
 
-def _make_arena_metric(judge_model: str, component: str) -> ArenaGEval:
+def _make_arena_metric(
+    judge_model: DeepEvalBaseLLM,
+    component: str,
+    contestants: tuple[str, str],
+) -> ArenaGEval:
+    left_label = _provider_label(contestants[0])
+    right_label = _provider_label(contestants[1])
     criteria = (
         f'Choose the better {component} for the given user input. '
         'Prioritize factual correctness, completeness, reasoning quality, and clarity. '
-        'Return the winner between Claude and Gemini.'
+        f'Return the winner between {left_label} and {right_label}.'
     )
     return ArenaGEval(
         name=f'{component.capitalize()} Pairwise Winner',
@@ -67,20 +152,37 @@ def _make_arena_metric(judge_model: str, component: str) -> ArenaGEval:
     )
 
 
-def _normalize_winner(raw_winner: object) -> str | None:
+def _normalize_winner(raw_winner: object, contestants: tuple[str, str]) -> str | None:
     if not raw_winner:
         return None
 
     winner_text = str(raw_winner).strip().lower()
-    if winner_text in {'claude', 'gemini'}:
+    if winner_text in contestants:
         return winner_text
+
+    aliases = {
+        'claude': 'anthropic',
+        'anthropic': 'anthropic',
+        'gemini': 'google',
+        'google': 'google',
+        'openai': 'openai',
+        'gpt': 'openai',
+    }
+    if winner_text in aliases and aliases[winner_text] in contestants:
+        return aliases[winner_text]
 
     # Some judge outputs include provider/model text like
     # "ANTHROPIC (claude-...)" or "GOOGLE (gemini-...)".
-    if 'anthropic' in winner_text or 'claude' in winner_text:
-        return 'claude'
-    if 'google' in winner_text or 'gemini' in winner_text:
-        return 'gemini'
+    contains_match: list[str] = []
+    if ('anthropic' in winner_text or 'claude' in winner_text) and 'anthropic' in contestants:
+        contains_match.append('anthropic')
+    if ('google' in winner_text or 'gemini' in winner_text) and 'google' in contestants:
+        contains_match.append('google')
+    if ('openai' in winner_text or 'gpt' in winner_text) and 'openai' in contestants:
+        contains_match.append('openai')
+
+    if len(contains_match) == 1:
+        return contains_match[0]
 
     return None
 
@@ -97,6 +199,7 @@ def _unwrap_masked_name(value: object) -> str | None:
 def _resolve_masked_winner(
     masked_winner: object,
     dummy_to_real_names: dict[str, str],
+    contestants: tuple[str, str],
 ) -> str | None:
     raw = _unwrap_masked_name(masked_winner)
     if not raw:
@@ -111,31 +214,39 @@ def _resolve_masked_winner(
             return real_name
 
     # Fallback when judge outputs real/provider names instead of dummy names.
-    return _normalize_winner(raw)
+    return _normalize_winner(raw, contestants)
 
 
 async def run_pairwise_arena_eval(
     *,
-    judge_model: str,
+    judge_model: DeepEvalBaseLLM,
+    judge_model_name: str,
     prompt: str,
     component: str,
-    claude_model: str,
-    claude_output: str,
-    gemini_model: str,
-    gemini_output: str,
+    left_provider: str,
+    left_model: str,
+    left_output: str,
+    right_provider: str,
+    right_model: str,
+    right_output: str,
 ) -> EvaluationResult:
-    metric = _make_arena_metric(judge_model=judge_model, component=component)
+    contestants = (left_provider, right_provider)
+    metric = _make_arena_metric(
+        judge_model=judge_model,
+        component=component,
+        contestants=contestants,
+    )
     test_case = ArenaTestCase(
         contestants=[
             Contestant(
-                name='claude',
-                hyperparameters={'provider': 'anthropic', 'model': claude_model},
-                test_case=LLMTestCase(input=prompt, actual_output=claude_output),
+                name=left_provider,
+                hyperparameters={'provider': left_provider, 'model': left_model},
+                test_case=LLMTestCase(input=prompt, actual_output=left_output),
             ),
             Contestant(
-                name='gemini',
-                hyperparameters={'provider': 'google', 'model': gemini_model},
-                test_case=LLMTestCase(input=prompt, actual_output=gemini_output),
+                name=right_provider,
+                hyperparameters={'provider': right_provider, 'model': right_model},
+                test_case=LLMTestCase(input=prompt, actual_output=right_output),
             ),
         ]
     )
@@ -144,42 +255,59 @@ async def run_pairwise_arena_eval(
     # internal KeyError in deepeval when it maps masked names. We run the
     # compare steps directly and normalize the winner ourselves.
     if hasattr(metric, '_a_generate_evaluation_steps') and hasattr(metric, '_a_compare'):
-        metric.evaluation_steps = await metric._a_generate_evaluation_steps(test_case.multimodal)
-        masked_winner, masked_reason, dummy_to_real_names = await metric._a_compare(
-            test_case,
-            test_case.multimodal,
+        metric.evaluation_steps = await _run_with_transient_retries(
+            lambda: metric._a_generate_evaluation_steps(test_case.multimodal)
         )
-        winner = _normalize_winner(_resolve_masked_winner(masked_winner, dummy_to_real_names))
+        masked_winner, masked_reason, dummy_to_real_names = await _run_with_transient_retries(
+            lambda: metric._a_compare(test_case, test_case.multimodal)
+        )
+        winner = _resolve_masked_winner(masked_winner, dummy_to_real_names, contestants)
         if hasattr(metric, '_a_generate_rewritten_reason'):
-            reason = await metric._a_generate_rewritten_reason(masked_reason, dummy_to_real_names)
+            reason = await _run_with_transient_retries(
+                lambda: metric._a_generate_rewritten_reason(masked_reason, dummy_to_real_names)
+            )
         else:
             reason = masked_reason
     else:
         if hasattr(metric, 'a_measure'):
-            await metric.a_measure(test_case)
+            await _run_with_transient_retries(lambda: metric.a_measure(test_case))
         else:
             await asyncio.to_thread(metric.measure, test_case)
-        winner = _normalize_winner(getattr(metric, 'winner', None))
+        winner = _normalize_winner(getattr(metric, 'winner', None), contestants)
         reason = getattr(metric, 'reason', None)
 
     return EvaluationResult(
         provider='pairwise',
         component=component,
-        judge_model=judge_model,
-        contestants=['claude', 'gemini'],
+        judge_model=judge_model_name,
+        contestants=[left_provider, right_provider],
         winner=winner,
         reason=reason,
     )
+
+
+def _get_model_name(provider: str, response: ModelResponse | None) -> str:
+    if response:
+        return response.model
+    if provider == 'openai':
+        return OPENAI_MODEL
+    if provider == 'anthropic':
+        return ANTHROPIC_MODEL
+    return GEMINI_MODEL
 
 
 async def _evaluate_metrics(
     *,
     message: str,
     chat_by_provider: dict[str, tuple[ModelResponse | None, CritiqueResponse | None]],
+    judge_provider: str,
+    judge_model: str,
+    evaluate_providers: Iterable[str],
 ) -> list[EvaluationResult]:
     evaluations: list[EvaluationResult] = []
+    judge_llm = _build_judge_llm(judge_provider, judge_model)
 
-    for provider in ('anthropic', 'google'):
+    for provider in evaluate_providers:
         response, critique = chat_by_provider[provider]
 
         for component, content in [
@@ -195,14 +323,13 @@ async def _evaluate_metrics(
                 continue
 
             test_case = LLMTestCase(input=message, actual_output=content)
-            metrics = _make_GEval_metrics(OPENAI_MODEL)
+            metrics = _make_GEval_metrics(judge_llm)
             scores: dict[str, float] = {}
             metric_errors: dict[str, str] = {}
 
             for metric_name, metric in metrics.items():
                 try:
-                    await metric.a_measure(test_case)
-                    scores[metric_name] = metric.score
+                    scores[metric_name] = await _measure_with_retries(metric, test_case)
                 except Exception as exc:
                     metric_errors[metric_name] = str(exc)
 
@@ -210,6 +337,7 @@ async def _evaluate_metrics(
                 provider=provider,
                 component=component,
                 scores=scores,
+                judge_model=judge_model,
                 error='; '.join(f'{k}: {v}' for k, v in metric_errors.items()) or None,
             ))
 
@@ -220,40 +348,51 @@ async def _evaluate_pairwise(
     *,
     message: str,
     chat_by_provider: dict[str, tuple[ModelResponse | None, CritiqueResponse | None]],
+    judge_provider: str,
+    judge_model: str,
+    contestants: tuple[str, str],
 ) -> list[EvaluationResult]:
     evaluations: list[EvaluationResult] = []
-    claude_response, _ = chat_by_provider['anthropic']
-    gemini_response, _ = chat_by_provider['google']
-    claude_content = claude_response.content if claude_response else None
-    gemini_content = gemini_response.content if gemini_response else None
+    judge_llm = _build_judge_llm(judge_provider, judge_model)
+    left_provider, right_provider = contestants
+    left_response, _ = chat_by_provider[left_provider]
+    right_response, _ = chat_by_provider[right_provider]
+    left_content = left_response.content if left_response else None
+    right_content = right_response.content if right_response else None
 
-    if not claude_content or not gemini_content:
+    if not left_content or not right_content:
         return [EvaluationResult(
             provider='pairwise',
             component='response',
-            judge_model=OPENAI_MODEL,
-            contestants=['claude', 'gemini'],
-            error='Missing Claude or Gemini response content for pairwise evaluation',
+            judge_model=judge_model,
+            contestants=[left_provider, right_provider],
+            error=(
+                f'Missing {_provider_label(left_provider)} or '
+                f'{_provider_label(right_provider)} response content for pairwise evaluation'
+            ),
         )]
 
     try:
         evaluations.append(
             await run_pairwise_arena_eval(
-                judge_model=OPENAI_MODEL,
+                judge_model=judge_llm,
+                judge_model_name=judge_model,
                 prompt=message,
                 component='response',
-                claude_model=claude_response.model if claude_response else ANTHROPIC_MODEL,
-                claude_output=claude_content,
-                gemini_model=gemini_response.model if gemini_response else GEMINI_MODEL,
-                gemini_output=gemini_content,
+                left_provider=left_provider,
+                left_model=_get_model_name(left_provider, left_response),
+                left_output=left_content,
+                right_provider=right_provider,
+                right_model=_get_model_name(right_provider, right_response),
+                right_output=right_content,
             )
         )
     except Exception as exc:
         evaluations.append(EvaluationResult(
             provider='pairwise',
             component='response',
-            judge_model=OPENAI_MODEL,
-            contestants=['claude', 'gemini'],
+            judge_model=judge_model,
+            contestants=[left_provider, right_provider],
             error=str(exc),
         ))
 

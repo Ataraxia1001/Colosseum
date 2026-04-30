@@ -2,7 +2,7 @@ from llm import llm_clients
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse
-from langgraph import chat_graph
+from arena_graph import chat_graph
 from utils import build_chat_config
 
 
