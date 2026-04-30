@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import './InputBar.css'
 
 export default function InputBar({ input, setInput, onSubmit, loading }) {
   const textareaRef = useRef(null)

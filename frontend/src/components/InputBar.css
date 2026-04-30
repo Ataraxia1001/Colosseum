@@ -1,0 +1,97 @@
+.input-bar {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #4b3525;
+  background: linear-gradient(180deg, #120d08 0%, #140f0b 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid #4a3323;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  transition: border-color 0.15s, box-shadow 0.2s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: #a57035;
+  box-shadow: 0 0 0 3px rgba(199, 135, 63, 0.18);
+}
+
+.input-wrapper textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.input-wrapper textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.send-btn {
+  width: 44px;
+  height: 32px;
+  padding: 0;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #f0c37c 0%, #cf8f39 55%, #995713 100%);
+  color: #221205;
+  border: 1px solid #7c4311;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(255, 228, 179, 0.55) inset, 0 6px 14px rgba(0, 0, 0, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  line-height: 1;
+}
+
+.send-btn-icon {
+  font-size: 18px;
+  color: #2b1809;
+  text-shadow: 0 1px 0 rgba(255, 233, 194, 0.45);
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
+.send-btn:disabled {
+  opacity: 0.5;
+  background: linear-gradient(145deg, #575757 0%, #3f3f3f 100%);
+  border-color: #474747;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.send-btn:not(:disabled):hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255, 228, 179, 0.7) inset, 0 10px 16px rgba(0, 0, 0, 0.32);
+}
+
+.send-btn:not(:disabled):active {
+  transform: translateY(0);
+  filter: brightness(0.95);
+}
+
+.input-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.02em;
+}

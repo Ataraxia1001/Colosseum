@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import './App.css'
 import Sidebar from './components/Sidebar'
 import InputBar from './components/InputBar'
 import ChatArea from './components/ChatArea'
-import { requestChat } from './services/chatService'
+import { requestChatStream } from './services/chatService'
 
 const API_BASE = __API_BASE__
 
@@ -42,19 +43,34 @@ export default function App() {
     setLoading(true)
     setError('')
     setInput('')
-    setHistory((prev) => [...prev, { role: 'user', content: msg }])
+    setHistory((prev) => [
+      ...prev,
+      { role: 'user', content: msg },
+      { role: 'assistant', responses: [], critiques: [], evaluations: [], summary: null },
+    ])
 
     try {
-      const responsesWithCritiques = await requestChat({
+      await requestChatStream({
         apiBase: API_BASE,
         message: msg,
         providerRank: PROVIDER_RANK,
+        onEvent: ({ responses, critiques, evaluations, summary }) => {
+          setHistory((prev) => {
+            const next = [...prev]
+            const assistantIndex = next.length - 1
+            if (assistantIndex >= 0 && next[assistantIndex].role === 'assistant') {
+              next[assistantIndex] = {
+                ...next[assistantIndex],
+                responses,
+                critiques,
+                evaluations,
+                summary: summary ?? next[assistantIndex].summary,
+              }
+            }
+            return next
+          })
+        },
       })
-
-      setHistory((prev) => [
-        ...prev,
-        { role: 'assistant', responses: responsesWithCritiques },
-      ])
     } catch (err) {
       setError(err.message || 'Something went wrong.')
     } finally {

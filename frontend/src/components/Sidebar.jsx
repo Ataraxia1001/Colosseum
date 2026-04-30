@@ -1,3 +1,5 @@
+import './Sidebar.css'
+
 export default function Sidebar({ providerColors, onNewChat }) {
   const providers = ['openai', 'anthropic', 'google']
 

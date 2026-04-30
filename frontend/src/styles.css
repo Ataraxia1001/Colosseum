@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap');
+/* This file is intentionally empty. Styles are split per component:
+ *   src/base.css            — CSS variables, reset, body
+ *   src/App.css             — App layout
+ *   src/components/Sidebar.css
+ *   src/components/ChatArea.css
+ *   src/components/InputBar.css
+ */
+
 
 :root {
   --bg: #120d08;
@@ -195,6 +202,82 @@ body {
 /* Turns */
 .turn { width: 100%; }
 
+.assistant-turn-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding-left: 2px;
+}
+
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-badges-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid #4b3525;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+}
+
+.status-badge.running {
+  border-color: #a57035;
+  color: #f6cb87;
+  background: rgba(201, 132, 44, 0.14);
+  animation: statusPulse 1.2s ease-in-out infinite;
+}
+
+.status-badge.done {
+  border-color: #2d8d6f;
+  color: #8de3c9;
+  background: rgba(24, 130, 100, 0.18);
+}
+
+.status-badge.pending {
+  border-color: #4b3525;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(201, 132, 44, 0.0);
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(201, 132, 44, 0.15);
+    transform: translateY(-0.5px);
+    filter: brightness(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-badge.running {
+    animation: none;
+  }
+}
+
 /* User bubble */
 .user-bubble {
   display: flex;
@@ -294,6 +377,44 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--text);
+}
+
+.pending-text {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.summary-panel {
+  background: var(--surface);
+  border: 1px solid #4b3525;
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.summary-title {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.summary-panel pre {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.summary-winner {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* Loading dots */
