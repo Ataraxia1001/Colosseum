@@ -14,13 +14,16 @@ Colosseum is a multi-LLM chat arena. One prompt is sent to OpenAI, Claude, and G
 
 ```text
 Colosseum/
+├── config/
+│   ├── config.py        # Shared config loader
+│   └── config.yaml      # Non-secret runtime config (backend + frontend)
 ├── backend/
 │   ├── main.py          # FastAPI routes
 │   ├── graph.py         # LangGraph 2-phase graph
 │   ├── llm_clients.py   # API clients for all 3 providers
 │   ├── schemas.py       # Pydantic request/response models
 │   ├── pyproject.toml
-│   ├── .env             # API keys (copy from .env.example, not committed)
+│   ├── .env             # API keys only (copy from .env.example, not committed)
 │   ├── .env.example
 │   └── Dockerfile
 ├── frontend/
@@ -69,21 +72,35 @@ ANTHROPIC_API_KEY=...
 GEMINI_API_KEY=...
 ```
 
-Optional — override default models:
+Non-secret runtime settings are configured in `config/config.yaml`:
 
-```env
-OPENAI_MODEL=gpt-4.1-mini
-ANTHROPIC_MODEL=claude-haiku-4-5-20251001
-GEMINI_MODEL=gemini-2.5-flash
+```yaml
+models:
+  openai: gpt-4.1-mini
+  anthropic: claude-haiku-4-5-20251001
+  gemini: gemini-2.5-flash
+
+gemini:
+  timeout_seconds: 30
+  max_retries: 3
+  retry_backoff_seconds: 1.0
+
+langsmith:
+  tracing: true
+  project: colosseum
+  endpoint: https://api.smith.langchain.com
+
+frontend:
+  api_base: http://localhost:8000
 ```
 
-Optional — enable LangSmith tracing for LangGraph runs:
+`backend/.env` should contain API keys only:
 
 ```env
-LANGSMITH_TRACING=true
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+GEMINI_API_KEY=...
 LANGSMITH_API_KEY=...
-LANGSMITH_PROJECT=colosseum
-LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 ```
 
 **Step 2 — Build and start both services:**

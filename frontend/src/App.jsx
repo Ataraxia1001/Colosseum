@@ -4,7 +4,7 @@ import InputBar from './components/InputBar'
 import ChatArea from './components/ChatArea'
 import { requestChat } from './services/chatService'
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+const API_BASE = __API_BASE__
 
 const PROVIDER_ICONS = {
   openai: '✦',

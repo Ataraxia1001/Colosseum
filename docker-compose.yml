@@ -21,8 +21,8 @@ services:
     container_name: colosseum-frontend
     ports:
       - "5173:5173"
-    environment:
-      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+    volumes:
+      - ./config:/config:ro
     depends_on:
       - backend
 

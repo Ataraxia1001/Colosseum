@@ -2,22 +2,22 @@ import asyncio
 import os
 from typing import Any
 import httpx
-from dotenv import load_dotenv
 
+from config_loader import get_config
 from schemas import ModelResponse
 
-load_dotenv()
+_CONFIG = get_config()
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
-OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4.1-mini')
-ANTHROPIC_MODEL = os.getenv('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
-GEMINI_TIMEOUT_SECONDS = float(os.getenv('GEMINI_TIMEOUT_SECONDS', '30'))
-GEMINI_MAX_RETRIES = int(os.getenv('GEMINI_MAX_RETRIES', '3'))
-GEMINI_RETRY_BACKOFF_SECONDS = float(os.getenv('GEMINI_RETRY_BACKOFF_SECONDS', '1.0'))
+OPENAI_MODEL = _CONFIG.models.openai
+ANTHROPIC_MODEL = _CONFIG.models.anthropic
+GEMINI_MODEL = _CONFIG.models.gemini
+GEMINI_TIMEOUT_SECONDS = _CONFIG.gemini.timeout_seconds
+GEMINI_MAX_RETRIES = _CONFIG.gemini.max_retries
+GEMINI_RETRY_BACKOFF_SECONDS = _CONFIG.gemini.retry_backoff_seconds
 
 initial_opinion: list[ModelResponse] = []
 

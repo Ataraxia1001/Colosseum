@@ -1,0 +1,17 @@
+models:
+  openai: gpt-4.1-mini
+  anthropic: claude-haiku-4-5-20251001
+  gemini: gemini-2.5-flash
+
+gemini:
+  timeout_seconds: 30
+  max_retries: 3
+  retry_backoff_seconds: 1.0
+
+langsmith:
+  tracing: true
+  project: colosseum
+  endpoint: https://api.smith.langchain.com
+
+frontend:
+  api_base: http://localhost:8000

@@ -16,7 +16,10 @@ export default [
           jsx: true,
         },
       },
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        __API_BASE__: 'readonly',
+      },
     },
     plugins: {
       react,

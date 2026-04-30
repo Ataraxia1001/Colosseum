@@ -1,8 +1,11 @@
-import os
 from pathlib import Path
 from uuid import uuid4
 
+from config_loader import get_config
 from schemas import ModelResponse
+
+
+_CONFIG = get_config()
 
 
 def build_chat_config() -> dict:
@@ -16,11 +19,11 @@ def build_chat_config() -> dict:
         'configurable': {'thread_id': f'chat-{uuid4()}'},
     }
 
-    # LangSmith tracing can be enabled via LANGSMITH_TRACING in the environment.
-    if os.getenv('LANGSMITH_TRACING', '').lower() in {'1', 'true', 'yes'}:
-        project = os.getenv('LANGSMITH_PROJECT')
-        if project:
-            run_config['metadata']['langsmith_project'] = project
+    if _CONFIG.langsmith.tracing:
+        if _CONFIG.langsmith.project:
+            run_config['metadata']['langsmith_project'] = _CONFIG.langsmith.project
+        if _CONFIG.langsmith.endpoint:
+            run_config['metadata']['langsmith_endpoint'] = _CONFIG.langsmith.endpoint
 
     return run_config
 
