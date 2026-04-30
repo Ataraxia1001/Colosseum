@@ -1,7 +1,7 @@
 from llm import llm_clients
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse
+from schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
 from arena_graph import chat_graph
 from utils import build_chat_config
 
@@ -29,12 +29,13 @@ async def chat(request: ChatRequest) -> dict:
         raise HTTPException(status_code=400, detail='Message cannot be empty.')
 
     result = await chat_graph.ainvoke(
-        {'message': message, 'responses': [], 'critiques': [], 'evaluations': []},
+        {'message': message, 'responses': [], 'critiques': [], 'evaluations': [], 'summary': None},
         config=build_chat_config(),
     )
     normalized: list[ModelResponse] = result['responses']
     critiques: list[CritiqueResponse] = result['critiques']
     evaluations: list[EvaluationResult] = result.get('evaluations', [])
+    summary: SummaryResult | None = result.get('summary')
 
     llm_clients.initial_opinion = normalized
 
@@ -42,6 +43,7 @@ async def chat(request: ChatRequest) -> dict:
         'responses': normalized,
         'critiques': critiques,
         'evaluations': evaluations,
+        'summary': summary,
     }
 
 

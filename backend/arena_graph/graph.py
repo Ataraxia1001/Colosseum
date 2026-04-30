@@ -15,6 +15,7 @@ try:
         openai_evaluation_node,
         claude_evaluation_node,
         gemini_evaluation_node,
+        summary_node,
     )
     from utils import save_graph_image
 except ImportError:
@@ -32,6 +33,7 @@ except ImportError:
         openai_evaluation_node,
         claude_evaluation_node,
         gemini_evaluation_node,
+        summary_node,
     )
     from utils import save_graph_image
 
@@ -46,6 +48,7 @@ graph.add_node('gemini_critique', gemini_critique_node)
 graph.add_node('openai_evaluation', openai_evaluation_node)
 graph.add_node('claude_evaluation', claude_evaluation_node)
 graph.add_node('gemini_evaluation', gemini_evaluation_node)
+graph.add_node('summary', summary_node)
 
 # Phase 1: all three run in parallel from START
 graph.add_edge(START, 'openai')
@@ -70,9 +73,12 @@ graph.add_edge('gemini_critique', 'claude_evaluation')
 graph.add_edge('openai_critique', 'gemini_evaluation')
 graph.add_edge('claude_critique', 'gemini_evaluation')
 graph.add_edge('gemini_critique', 'gemini_evaluation')
-graph.add_edge('openai_evaluation', END)
-graph.add_edge('claude_evaluation', END)
-graph.add_edge('gemini_evaluation', END)
+
+# Phase 4: all evaluation nodes fan-in to summary, then end.
+graph.add_edge('openai_evaluation', 'summary')
+graph.add_edge('claude_evaluation', 'summary')
+graph.add_edge('gemini_evaluation', 'summary')
+graph.add_edge('summary', END)
 
 chat_graph = graph.compile()
 

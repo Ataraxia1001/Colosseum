@@ -7,7 +7,7 @@ Colosseum is a multi-LLM chat arena. One prompt is sent to OpenAI, Claude, and G
 ## Stack
 
 - **Frontend:** React + Vite
-- **Backend:** FastAPI + LangGraph + LangSmith, Pydantic
+- **Backend:** LangGraph, LangSmith, DeepEval, FastAPI, Pydantic
 - **AI Providers:** OpenAI, Anthropic Claude, Google Gemini
 
 ## Project structure
@@ -52,6 +52,10 @@ All three models answer the user's question simultaneously.
 Each model receives the other two models' responses and critically evaluates them. All three critiques run in parallel.
 
 Both phases are orchestrated by a LangGraph `StateGraph`, and the backend exposes the workflow through a FastAPI API consumed by the Vite frontend.
+
+## LangGraph
+
+<img src="./backend/arena_graph/artifacts/chat_graph.png" alt="Arena Graph" width="700" />
 
 ## 1. Running with Docker Compose (recommended)
 

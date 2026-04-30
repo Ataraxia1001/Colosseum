@@ -3,7 +3,7 @@ from typing import Annotated, Callable, Coroutine, Any
 
 from typing_extensions import TypedDict
 
-from schemas import CritiqueResponse, EvaluationResult, ModelResponse
+from schemas import CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
 from llm.llm_clients import (
     ANTHROPIC_MODEL,
     GEMINI_MODEL,
@@ -13,6 +13,7 @@ from llm.llm_clients import (
     call_openai,
 )
 from llm.eval import _evaluate_metrics, _evaluate_pairwise
+from llm.summary import generate_summary
 from utils import _build_critique_prompt
 
 
@@ -21,6 +22,7 @@ class ChatState(TypedDict):
     responses: Annotated[list[ModelResponse], operator.add]
     critiques: Annotated[list[CritiqueResponse], operator.add]
     evaluations: Annotated[list[EvaluationResult], operator.add]
+    summary: SummaryResult | None
 
 
 async def openai_node(state: ChatState) -> dict:
@@ -117,3 +119,12 @@ gemini_critique_node = _make_critique_node('google', ('openai', 'anthropic'), ca
 openai_evaluation_node = _make_evaluation_node('openai', OPENAI_MODEL)
 claude_evaluation_node = _make_evaluation_node('anthropic', ANTHROPIC_MODEL)
 gemini_evaluation_node = _make_evaluation_node('google', GEMINI_MODEL)
+
+
+async def summary_node(state: ChatState) -> dict:
+    result = await generate_summary(
+        message=state['message'],
+        responses=state['responses'],
+        evaluations=state['evaluations'],
+    )
+    return {'summary': result}

@@ -29,3 +29,10 @@ class EvaluationResult(BaseModel):
     winner: str | None = None
     reason: str | None = None
     error: str | None = None
+
+
+class SummaryResult(BaseModel):
+    summary: str | None = None  # Three sentences, one per model
+    winner: str | None = None
+    is_tie: bool = False
+    error: str | None = None
