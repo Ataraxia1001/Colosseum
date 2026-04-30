@@ -3,7 +3,7 @@ import asyncio
 from deepeval.metrics import ArenaGEval, GEval
 from deepeval.test_case import ArenaTestCase, Contestant, LLMTestCase, LLMTestCaseParams, SingleTurnParams
 
-from llm_clients import ANTHROPIC_MODEL, GEMINI_MODEL, OPENAI_MODEL
+from .llm_clients import ANTHROPIC_MODEL, GEMINI_MODEL, OPENAI_MODEL
 from schemas import CritiqueResponse, EvaluationResult, ModelResponse
 
 

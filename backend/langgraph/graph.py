@@ -1,6 +1,6 @@
 from langgraph.graph import END, START, StateGraph
 
-from nodes import (
+from .nodes import (
     ChatState,
     openai_node,
     claude_node,
