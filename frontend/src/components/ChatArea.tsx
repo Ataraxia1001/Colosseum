@@ -402,7 +402,7 @@ interface SummarySectionProps {
 function SummarySection({ summary }: SummarySectionProps) {
   return (
     <div className="summary-panel">
-      <div className="summary-title">Summary</div>
+      {/* <div className="summary-title">Summary & Winner</div> */}
       {summary.error ? <p className="error-text">{summary.error}</p> : <pre>{summary.summary}</pre>}
       <p className="summary-winner">
         {summary.is_tie ? 'Result: Tie' : `Winner: ${summary.winner ? titleForProvider(summary.winner) : 'N/A'}`}
@@ -488,7 +488,7 @@ function AssistantTurnSections({
 
       {allCritiquesReady && evaluationsDone && (
         <>
-          <SinglePhaseHeader title="Summary" provider="System" status={summaryStatus} />
+          <SinglePhaseHeader title="Summary & Winner" provider="System" status={summaryStatus} />
           {turn.summary ? <SummarySection summary={turn.summary} /> : <SummaryProgress status={summaryStatus} />}
         </>
       )}
