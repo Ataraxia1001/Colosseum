@@ -6,7 +6,7 @@ Colosseum is a multi-LLM chat arena. One prompt is sent to OpenAI, Claude, and G
 
 ## Stack
 
-- **Frontend:** React + Vite
+- **Frontend:** React + TypeScript + Vite
 - **Backend:** LangGraph, LangSmith, DeepEval, FastAPI, Pydantic
 - **AI Providers:** OpenAI, Anthropic Claude, Google Gemini
 
@@ -28,11 +28,11 @@ Colosseum/
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx
-│   │   ├── main.jsx
+│   │   ├── App.tsx
+│   │   ├── main.tsx
 │   │   └── styles.css
 │   ├── package.json
-│   ├── vite.config.js
+│   ├── vite.config.ts
 │   └── Dockerfile
 ├── images/
 │   ├── colosseum.png
@@ -149,7 +149,7 @@ npm install
 npm run dev
 ```
 
-The dev server listens on all interfaces (`host: true` in `vite.config.js`) at port 5173.
+The dev server listens on all interfaces (`host: true` in `vite.config.ts`) at port 5173.
 
 ## 4. API
 
