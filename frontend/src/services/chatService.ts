@@ -81,6 +81,21 @@ function upsertByProvider<T extends { provider: Provider }>(list: T[], item: T):
   return updated
 }
 
+function evaluationKey(item: Evaluation): string {
+  const contestantsKey = (item.contestants || []).join('|')
+  return [item.provider, item.component, item.judge_model || '', contestantsKey].join('::')
+}
+
+function upsertEvaluation(list: Evaluation[], item: Evaluation): Evaluation[] {
+  const key = evaluationKey(item)
+  const index = list.findIndex((x) => evaluationKey(x) === key)
+  if (index === -1) return [...list, item]
+
+  const updated = [...list]
+  updated[index] = item
+  return updated
+}
+
 export async function requestChatStream({
   apiBase,
   message,
@@ -139,7 +154,7 @@ export async function requestChatStream({
         critiques = upsertByProvider(critiques, item)
       }
       for (const item of payload.evaluations || []) {
-        evaluations = [...evaluations, item]
+        evaluations = upsertEvaluation(evaluations, item)
       }
 
       const orderedResponses = [...responses].sort(

@@ -158,7 +158,7 @@ function ResponsesSection({ turn, isActiveTurn, loading, providerColors, provide
               item={item}
               providerColors={providerColors}
               providerIcons={providerIcons}
-              modelName={item?.model || 'Waiting...'}
+              modelName={item?.model || titleForProvider(provider)}
             />
           )
         })}
@@ -188,7 +188,7 @@ function CritiquesSection({ turn, isActiveTurn, loading, providerColors, provide
               item={item}
               providerColors={providerColors}
               providerIcons={providerIcons}
-              modelName="Critique"
+              modelName={item?.model || titleForProvider(provider)}
             />
           )
         })}
@@ -203,7 +203,106 @@ interface EvaluationsSectionProps {
   status: 'Done' | 'Running' | 'Pending'
 }
 
+interface AggregatedEvalRow {
+  provider: Provider
+  component: string
+  sampleCount: number
+  metrics: Record<string, number>
+}
+
+const metricOrder = ['correctness', 'completeness', 'reasoning', 'clarity']
+const componentOrder = ['response', 'critique']
+
+function judgeLabelForPairwise(contestants: Provider[] | undefined): string {
+  if (!contestants || contestants.length === 0) return 'Unknown'
+  const judgeProvider = providers.find((provider) => !contestants.includes(provider))
+  return judgeProvider ? titleForProvider(judgeProvider) : 'Unknown'
+}
+
+function pairwiseJudgeText(evaluation: Evaluation): string {
+  const contestants = (evaluation.contestants || []) as Provider[]
+  const judge = judgeLabelForPairwise(contestants)
+  const winner = evaluation.winner ? titleForProvider(evaluation.winner) : null
+  const loserProvider = evaluation.winner ? contestants.find((provider) => provider !== evaluation.winner) : undefined
+  const loser = loserProvider ? titleForProvider(loserProvider) : null
+
+  if (winner && loser) {
+    return `${judge} judges: ${winner} > ${loser}`
+  }
+
+  if (contestants.length >= 2) {
+    return `${judge} judges: ${titleForProvider(contestants[0])} vs ${titleForProvider(contestants[1])}`
+  }
+
+  return `${judge} judges: Pending result`
+}
+
+function aggregateEvaluations(evaluations: Evaluation[]): AggregatedEvalRow[] {
+  const grouped = new Map<
+    string,
+    {
+      provider: Provider
+      component: string
+      judges: Set<string>
+      totals: Record<string, number>
+      counts: Record<string, number>
+    }
+  >()
+
+  for (const evaluation of evaluations) {
+    if (!isProvider(evaluation.provider) || !evaluation.scores || Object.keys(evaluation.scores).length === 0) {
+      continue
+    }
+
+    const key = `${evaluation.provider}:${evaluation.component}`
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        provider: evaluation.provider,
+        component: evaluation.component,
+        judges: new Set<string>(),
+        totals: {},
+        counts: {},
+      })
+    }
+
+    const entry = grouped.get(key)
+    if (!entry) continue
+    entry.judges.add(evaluation.judge_model || 'unknown-judge')
+
+    for (const [metric, score] of Object.entries(evaluation.scores)) {
+      entry.totals[metric] = (entry.totals[metric] || 0) + score
+      entry.counts[metric] = (entry.counts[metric] || 0) + 1
+    }
+  }
+
+  return Array.from(grouped.values())
+    .map((entry) => {
+      const metrics: Record<string, number> = {}
+      for (const metric of Object.keys(entry.totals)) {
+        const count = entry.counts[metric] || 1
+        metrics[metric] = entry.totals[metric] / count
+      }
+
+      return {
+        provider: entry.provider,
+        component: entry.component,
+        sampleCount: entry.judges.size,
+        metrics,
+      }
+    })
+    .sort((a, b) => {
+      const providerDelta = providers.indexOf(a.provider) - providers.indexOf(b.provider)
+      if (providerDelta !== 0) return providerDelta
+      const componentDelta = componentOrder.indexOf(a.component) - componentOrder.indexOf(b.component)
+      if (componentDelta !== 0) return componentDelta
+      return a.component.localeCompare(b.component)
+    })
+}
+
 function EvaluationsSection({ evaluations, providerColors, status }: EvaluationsSectionProps) {
+  const aggregatedRows = aggregateEvaluations(evaluations)
+  const pairwiseRows = evaluations.filter((evaluation) => evaluation.provider === 'pairwise')
+
   return (
     <>
       <div className="section-header-row">
@@ -214,50 +313,58 @@ function EvaluationsSection({ evaluations, providerColors, status }: Evaluations
           </span>
         </div>
       </div>
-      {evaluations.length > 0 && (
-        <div className="eval-grid">
-          {evaluations.map((evaluation, index) => {
-            const providerColor = isProvider(evaluation.provider)
-              ? providerColors[evaluation.provider]
-              : 'var(--text-muted)'
-
-            return (
-              <div className="eval-card" key={`${evaluation.component}-${index}`}>
-                <div className="eval-card-header">
-                  <span className="eval-provider" style={{ color: providerColor }}>
-                    {evaluation.provider === 'pairwise'
-                      ? `${(evaluation.contestants || []).map(titleForProvider).join(' vs ')}`
-                      : titleForProvider(evaluation.provider)}
-                  </span>
-                  <span className="eval-component">{evaluation.component}</span>
-                </div>
-                {evaluation.error ? (
-                  <p className="error-text">{evaluation.error}</p>
-                ) : evaluation.winner ? (
-                  <p className="eval-winner">
-                    Winner: <strong>{titleForProvider(evaluation.winner)}</strong>
-                  </p>
-                ) : (
-                  <div className="eval-scores">
-                    {Object.entries(evaluation.scores || {}).map(([metric, score]) => (
-                      <div className="eval-score-row" key={metric}>
-                        <span className="eval-metric">{metric}</span>
-                        <span className="eval-score-bar-wrap">
-                          <span
-                            className="eval-score-bar"
-                            style={{ width: `${Math.min(score * 10, 100)}%` }}
-                          />
-                        </span>
-                        <span className="eval-score-val">{score.toFixed(1)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+      {aggregatedRows.length > 0 && (
+        <div className="eval-plot-panel">
+          {aggregatedRows.map((row) => (
+            <div className="eval-plot-row" key={`${row.provider}-${row.component}`}>
+              <div className="eval-plot-row-head">
+                <span className="eval-provider" style={{ color: providerColors[row.provider] }}>
+                  {titleForProvider(row.provider)}
+                </span>
+                <span className="eval-component">{row.component}</span>
+                <span className="eval-plot-row-meta">{row.sampleCount} judges</span>
               </div>
-            )
-          })}
+              <div className="eval-scores">
+                {[...Object.keys(row.metrics)].sort((a, b) => {
+                  const ai = metricOrder.indexOf(a)
+                  const bi = metricOrder.indexOf(b)
+                  if (ai === -1 && bi === -1) return a.localeCompare(b)
+                  if (ai === -1) return 1
+                  if (bi === -1) return -1
+                  return ai - bi
+                }).map((metric) => {
+                  const score = row.metrics[metric]
+                  return (
+                    <div className="eval-score-row" key={`${row.provider}-${row.component}-${metric}`}>
+                      <span className="eval-metric">{metric}</span>
+                      <span className="eval-score-bar-wrap">
+                        <span
+                          className="eval-score-bar"
+                          style={{ width: `${Math.min(score * 10, 100)}%` }}
+                        />
+                      </span>
+                      <span className="eval-score-val">{score.toFixed(1)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
+
+      {pairwiseRows.length > 0 && (
+        <div className="pairwise-row">
+          {pairwiseRows.map((evaluation, index) => (
+            <div className="pairwise-pill" key={`pairwise-${index}`}>
+              {pairwiseJudgeText(evaluation)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status === 'Done' && evaluations.length === 0 && <p className="phase-progress-text">No evaluation results.</p>}
+
       {status !== 'Done' && (
         <div className="typing-dots">
           <span />

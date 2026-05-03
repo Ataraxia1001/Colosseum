@@ -17,6 +17,7 @@ export interface ResponseItem {
 
 export interface CritiqueItem {
   provider: Provider
+  model?: string
   content?: string
   error?: string
 }
@@ -24,6 +25,7 @@ export interface CritiqueItem {
 export interface Evaluation {
   provider: Provider | 'pairwise' | string
   component: string
+  judge_model?: string
   error?: string
   winner?: Provider
   contestants?: Provider[]
