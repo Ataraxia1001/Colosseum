@@ -22,6 +22,11 @@ class GeminiConfig:
 
 
 @dataclass(frozen=True)
+class DeepEvalConfig:
+    per_attempt_timeout_seconds_override: float | None
+
+
+@dataclass(frozen=True)
 class LangSmithConfig:
     tracing: bool
     project: str
@@ -32,6 +37,7 @@ class LangSmithConfig:
 class AppConfig:
     models: ModelConfig
     gemini: GeminiConfig
+    deepeval: DeepEvalConfig
     langsmith: LangSmithConfig
 
 
@@ -45,6 +51,9 @@ _DEFAULT_CONFIG: dict[str, Any] = {
         'timeout_seconds': 30,
         'max_retries': 3,
         'retry_backoff_seconds': 1.0,
+    },
+    'deepeval': {
+        'per_attempt_timeout_seconds_override': 180,
     },
     'langsmith': {
         'tracing': True,
@@ -87,6 +96,10 @@ def _load_raw_config() -> dict[str, Any]:
             **_DEFAULT_CONFIG['gemini'],
             **(loaded.get('gemini') or {}),
         },
+        'deepeval': {
+            **_DEFAULT_CONFIG['deepeval'],
+            **(loaded.get('deepeval') or {}),
+        },
         'langsmith': {
             **_DEFAULT_CONFIG['langsmith'],
             **(loaded.get('langsmith') or {}),
@@ -111,7 +124,16 @@ def get_config() -> AppConfig:
 
     models_raw = raw.get('models', {})
     gemini_raw = raw.get('gemini', {})
+    deepeval_raw = raw.get('deepeval', {})
     langsmith_raw = raw.get('langsmith', {})
+
+    timeout_override_raw = deepeval_raw.get(
+        'per_attempt_timeout_seconds_override',
+        _DEFAULT_CONFIG['deepeval']['per_attempt_timeout_seconds_override'],
+    )
+    if isinstance(timeout_override_raw, str) and timeout_override_raw.strip().lower() == 'none':
+        timeout_override_raw = None
+    timeout_override = None if timeout_override_raw is None else float(timeout_override_raw)
 
     _CONFIG = AppConfig(
         models=ModelConfig(
@@ -128,6 +150,9 @@ def get_config() -> AppConfig:
                     _DEFAULT_CONFIG['gemini']['retry_backoff_seconds'],
                 )
             ),
+        ),
+        deepeval=DeepEvalConfig(
+            per_attempt_timeout_seconds_override=timeout_override,
         ),
         langsmith=LangSmithConfig(
             tracing=_as_bool(langsmith_raw.get('tracing'), _DEFAULT_CONFIG['langsmith']['tracing']),

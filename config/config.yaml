@@ -8,6 +8,9 @@ gemini:
   max_retries: 3
   retry_backoff_seconds: 1.0
 
+deepeval:
+  per_attempt_timeout_seconds_override: 180
+
 langsmith:
   tracing: true
   project: colosseum

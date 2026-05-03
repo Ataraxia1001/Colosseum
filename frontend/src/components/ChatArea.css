@@ -238,6 +238,33 @@
   gap: 10px;
 }
 
+.phase-progress-panel {
+  background: var(--surface);
+  border: 1px solid #4b3525;
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.phase-progress-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.phase-progress-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.phase-progress-meta {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .eval-card {
   background: var(--surface);
   border: 1px solid #4b3525;

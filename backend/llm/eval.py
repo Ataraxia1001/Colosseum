@@ -1,5 +1,14 @@
 import asyncio
+import os
 from collections.abc import Iterable
+
+from config_loader import get_config
+
+_CONFIG = get_config()
+if _CONFIG.deepeval.per_attempt_timeout_seconds_override is not None:
+    os.environ['DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE'] = str(
+        _CONFIG.deepeval.per_attempt_timeout_seconds_override
+    )
 
 from deepeval.metrics import ArenaGEval, GEval
 from deepeval.models import AnthropicModel, DeepEvalBaseLLM, GeminiModel, GPTModel
@@ -30,6 +39,11 @@ TRANSIENT_EVAL_ERROR_MARKERS = (
     ' 502 ',
     ' 503 ',
     ' 504 ',
+    'retryerror',
+    'timeout',
+    'timed out',
+    'deadline exceeded',
+    'temporarily unavailable',
     'unavailable',
     'high demand',
     'rate limit',
@@ -45,6 +59,18 @@ def _is_transient_eval_error(exc: Exception) -> bool:
     return any(marker in message for marker in TRANSIENT_EVAL_ERROR_MARKERS)
 
 
+def _format_eval_error(exc: Exception) -> str:
+    message = str(exc).strip()
+    lowered = message.lower()
+
+    if ('retryerror' in lowered and 'timeout' in lowered) or 'timed out' in lowered:
+        return 'Judge request timed out after retries. Try again in a moment.'
+    if 'timeout' in lowered or 'deadline exceeded' in lowered:
+        return 'Judge request timed out. Try again in a moment.'
+
+    return message or exc.__class__.__name__
+
+
 def _eval_retry_settings() -> tuple[int, float]:
     return max(1, GEMINI_MAX_RETRIES), max(0.0, GEMINI_RETRY_BACKOFF_SECONDS)
 
@@ -54,6 +80,10 @@ async def _run_with_transient_retries(coro_factory):
     for attempt in range(1, max_retries + 1):
         try:
             return await coro_factory()
+        except TimeoutError:
+            if attempt >= max_retries:
+                raise
+            await asyncio.sleep(backoff_seconds * (2 ** (attempt - 1)))
         except Exception as exc:
             if attempt >= max_retries or not _is_transient_eval_error(exc):
                 raise
@@ -331,7 +361,7 @@ async def _evaluate_metrics(
                 try:
                     scores[metric_name] = await _measure_with_retries(metric, test_case)
                 except Exception as exc:
-                    metric_errors[metric_name] = str(exc)
+                    metric_errors[metric_name] = _format_eval_error(exc)
 
             evaluations.append(EvaluationResult(
                 provider=provider,
@@ -393,7 +423,7 @@ async def _evaluate_pairwise(
             component='response',
             judge_model=judge_model,
             contestants=[left_provider, right_provider],
-            error=str(exc),
+            error=_format_eval_error(exc),
         ))
 
     return evaluations

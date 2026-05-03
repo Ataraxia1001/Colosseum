@@ -49,6 +49,15 @@ const statusForPhase = (
   return 'Pending'
 }
 
+const phaseStatus = (
+  isDone: boolean,
+  isRunning: boolean
+): 'Done' | 'Running' | 'Pending' => {
+  if (isDone) return 'Done'
+  if (isRunning) return 'Running'
+  return 'Pending'
+}
+
 interface SectionHeaderProps {
   title: string
   providers: Provider[]
@@ -191,55 +200,89 @@ function CritiquesSection({ turn, isActiveTurn, loading, providerColors, provide
 interface EvaluationsSectionProps {
   evaluations: Evaluation[]
   providerColors: ProviderColorMap
+  status: 'Done' | 'Running' | 'Pending'
 }
 
-function EvaluationsSection({ evaluations, providerColors }: EvaluationsSectionProps) {
+function EvaluationsSection({ evaluations, providerColors, status }: EvaluationsSectionProps) {
   return (
     <>
-      <div className="section-title">Evaluations</div>
-      <div className="eval-grid">
-        {evaluations.map((evaluation, index) => {
-          const providerColor = isProvider(evaluation.provider)
-            ? providerColors[evaluation.provider]
-            : 'var(--text-muted)'
-
-          return (
-            <div className="eval-card" key={`${evaluation.component}-${index}`}>
-              <div className="eval-card-header">
-                <span className="eval-provider" style={{ color: providerColor }}>
-                  {evaluation.provider === 'pairwise'
-                    ? `${(evaluation.contestants || []).map(titleForProvider).join(' vs ')}`
-                    : titleForProvider(evaluation.provider)}
-                </span>
-                <span className="eval-component">{evaluation.component}</span>
-              </div>
-              {evaluation.error ? (
-                <p className="error-text">{evaluation.error}</p>
-              ) : evaluation.winner ? (
-                <p className="eval-winner">
-                  Winner: <strong>{titleForProvider(evaluation.winner)}</strong>
-                </p>
-              ) : (
-                <div className="eval-scores">
-                  {Object.entries(evaluation.scores || {}).map(([metric, score]) => (
-                    <div className="eval-score-row" key={metric}>
-                      <span className="eval-metric">{metric}</span>
-                      <span className="eval-score-bar-wrap">
-                        <span
-                          className="eval-score-bar"
-                          style={{ width: `${Math.min(score * 10, 100)}%` }}
-                        />
-                      </span>
-                      <span className="eval-score-val">{score.toFixed(1)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
+      <div className="section-header-row">
+        <div className="section-title">Evaluations</div>
+        <div className="status-badges-row">
+          <span className={`status-badge ${status.toLowerCase()}`}>
+            System: {status}
+          </span>
+        </div>
       </div>
+      {evaluations.length > 0 && (
+        <div className="eval-grid">
+          {evaluations.map((evaluation, index) => {
+            const providerColor = isProvider(evaluation.provider)
+              ? providerColors[evaluation.provider]
+              : 'var(--text-muted)'
+
+            return (
+              <div className="eval-card" key={`${evaluation.component}-${index}`}>
+                <div className="eval-card-header">
+                  <span className="eval-provider" style={{ color: providerColor }}>
+                    {evaluation.provider === 'pairwise'
+                      ? `${(evaluation.contestants || []).map(titleForProvider).join(' vs ')}`
+                      : titleForProvider(evaluation.provider)}
+                  </span>
+                  <span className="eval-component">{evaluation.component}</span>
+                </div>
+                {evaluation.error ? (
+                  <p className="error-text">{evaluation.error}</p>
+                ) : evaluation.winner ? (
+                  <p className="eval-winner">
+                    Winner: <strong>{titleForProvider(evaluation.winner)}</strong>
+                  </p>
+                ) : (
+                  <div className="eval-scores">
+                    {Object.entries(evaluation.scores || {}).map(([metric, score]) => (
+                      <div className="eval-score-row" key={metric}>
+                        <span className="eval-metric">{metric}</span>
+                        <span className="eval-score-bar-wrap">
+                          <span
+                            className="eval-score-bar"
+                            style={{ width: `${Math.min(score * 10, 100)}%` }}
+                          />
+                        </span>
+                        <span className="eval-score-val">{score.toFixed(1)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {evaluations.length === 0 && (
+        <p className="phase-progress-text">
+          {status === 'Running' ? 'Evaluation is in progress. Please wait...' : 'Waiting for evaluation...'}
+        </p>
+      )}
     </>
+  )
+}
+
+interface SinglePhaseHeaderProps {
+  title: string
+  provider: string
+  status: 'Done' | 'Running' | 'Pending'
+}
+
+function SinglePhaseHeader({ title, provider, status }: SinglePhaseHeaderProps) {
+  return (
+    <div className="section-header-row">
+      <div className="section-title">{title}</div>
+      <div className="status-badges-row">
+        <span className={`status-badge ${status.toLowerCase()}`}>
+          {provider}: {status}
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -259,6 +302,34 @@ function SummarySection({ summary }: SummarySectionProps) {
   )
 }
 
+interface SummaryProgressProps {
+  status: 'Done' | 'Running' | 'Pending'
+}
+
+function SummaryProgress({ status }: SummaryProgressProps) {
+  return (
+    <div className="summary-panel">
+      <div className="summary-title">Summary</div>
+      <div className="phase-progress-top">
+        <p className="phase-progress-text">
+          {status === 'Done'
+            ? 'Summary is ready.'
+            : status === 'Running'
+              ? 'Summary is being generated. Please wait...'
+              : 'Summary is waiting for evaluation to complete.'}
+        </p>
+        {(status === 'Running' || status === 'Pending') && (
+          <div className="typing-dots">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function AssistantTurnSections({
   turn,
   isActiveTurn,
@@ -268,8 +339,13 @@ function AssistantTurnSections({
 }: TurnSectionProps) {
   const allResponsesReady = providers.every((provider) => Boolean(findByProvider(turn.responses, provider)))
   const allCritiquesReady = providers.every((provider) => Boolean(findByProvider(turn.critiques, provider)))
-  const hasEvaluations = (turn.evaluations?.length || 0) > 0
   const evaluationsDone = (turn.evaluations?.length || 0) >= expectedEvaluationCount
+  const evaluationsRunning = isActiveTurn && loading && allCritiquesReady && !evaluationsDone
+  const evaluationsStatus = phaseStatus(evaluationsDone, evaluationsRunning)
+
+  const hasSummary = Boolean(turn.summary)
+  const summaryRunning = isActiveTurn && loading && evaluationsDone && !hasSummary
+  const summaryStatus = phaseStatus(hasSummary, summaryRunning)
 
   return (
     <div className="assistant-turn-sections">
@@ -291,11 +367,22 @@ function AssistantTurnSections({
         />
       )}
 
-      {allCritiquesReady && hasEvaluations && (
-        <EvaluationsSection evaluations={turn.evaluations} providerColors={providerColors} />
+      {allCritiquesReady && (
+        <>
+          <EvaluationsSection
+            evaluations={turn.evaluations}
+            providerColors={providerColors}
+            status={evaluationsStatus}
+          />
+        </>
       )}
 
-      {allCritiquesReady && evaluationsDone && turn.summary && <SummarySection summary={turn.summary} />}
+      {allCritiquesReady && evaluationsDone && (
+        <>
+          <SinglePhaseHeader title="Summary" provider="System" status={summaryStatus} />
+          {turn.summary ? <SummarySection summary={turn.summary} /> : <SummaryProgress status={summaryStatus} />}
+        </>
+      )}
     </div>
   )
 }
