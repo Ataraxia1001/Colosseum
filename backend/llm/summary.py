@@ -34,7 +34,8 @@ async def generate_summary(
         f'Three AI models answered the following question: "{message}"\n\n'
         f'{opinions}\n\n'
         'Write exactly three sentences. Each sentence summarizes one model\'s answer. '
-        'Label each sentence with the model name at the start, e.g. "OpenAI: ...", "Claude: ...", "Gemini: ...".'
+        'Label each sentence with the model name at the start, e.g. "OpenAI: ...", "Claude: ...", "Gemini: ...".\n\n'
+        'IMPORTANT: Respond in the exact same language as the question above.'
     )
 
     try:

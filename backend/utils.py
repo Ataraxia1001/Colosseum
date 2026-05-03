@@ -38,7 +38,8 @@ def _build_critique_prompt(message: str, targets: list[ModelResponse]) -> str:
         f'The following question was asked:\n"{message}"\n\n'
         f'Here are the responses:\n\n{responses_text}\n\n'
         'Critically evaluate these responses. Identify strengths, weaknesses, '
-        'inaccuracies, and areas for improvement in each.'
+        'inaccuracies, and areas for improvement in each.\n\n'
+        'IMPORTANT: Respond in the exact same language as the question above.'
     )
 
 

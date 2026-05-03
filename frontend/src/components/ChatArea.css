@@ -388,6 +388,7 @@
   display: flex;
   gap: 5px;
   align-items: center;
+  margin-top: 15px;
 }
 
 .typing-dots span {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { SiClaude, SiGooglegemini, SiOpenai } from 'react-icons/si'
 import ChatArea from './components/ChatArea'
 import InputBar from './components/InputBar'
 import Sidebar from './components/Sidebar'
@@ -16,9 +17,9 @@ import './App.css'
 const API_BASE = __API_BASE__
 
 const PROVIDER_ICONS: ProviderIconMap = {
-  openai: '✦',
-  anthropic: '◆',
-  google: '●',
+  openai: <SiOpenai />,
+  anthropic: <SiClaude />,
+  google: <SiGooglegemini />,
 }
 
 const PROVIDER_COLORS: ProviderColorMap = {
@@ -32,16 +33,41 @@ const PROVIDER_RANK: ProviderRank = Object.fromEntries(
   PROVIDER_ORDER.map((provider, index) => [provider, index])
 ) as ProviderRank
 
+const findLastAssistantTurn = (turns: ChatTurn[]): AssistantTurn | null => {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    if (turns[index].role === 'assistant') return turns[index] as AssistantTurn
+  }
+  return null
+}
+
 export default function App() {
   const [input, setInput] = useState('')
   const [history, setHistory] = useState<ChatTurn[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const previousHistoryLengthRef = useRef(0)
+  const previousResponsesCompleteRef = useRef(false)
+  const previousCritiquesCompleteRef = useRef(false)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [history, loading])
+    const latestAssistant = findLastAssistantTurn(history)
+    const responsesComplete = Boolean(latestAssistant && latestAssistant.responses.length === PROVIDER_ORDER.length)
+    const critiquesComplete = Boolean(latestAssistant && latestAssistant.critiques.length === PROVIDER_ORDER.length)
+    const startedNewTurn = history.length > previousHistoryLengthRef.current
+
+    if (
+      startedNewTurn ||
+      (!previousResponsesCompleteRef.current && responsesComplete) ||
+      (!previousCritiquesCompleteRef.current && critiquesComplete)
+    ) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    previousHistoryLengthRef.current = history.length
+    previousResponsesCompleteRef.current = responsesComplete
+    previousCritiquesCompleteRef.current = critiquesComplete
+  }, [history])
 
   const handleSubmit = async () => {
     const message = input.trim()

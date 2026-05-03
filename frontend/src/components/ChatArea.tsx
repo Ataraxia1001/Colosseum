@@ -104,7 +104,7 @@ function ProviderCard({ provider, item, providerColors, providerIcons, modelName
   return (
     <div className="response-card">
       <div className="response-header" style={{ borderColor: providerColors[provider] }}>
-        <span className="provider-icon" style={{ color: providerColors[provider] }}>
+        <span className="provider-icon" style={{ color: providerColors[provider], display: 'flex', alignItems: 'center' }}>
           {providerIcons[provider]}
         </span>
         <div className="provider-info">
@@ -258,10 +258,12 @@ function EvaluationsSection({ evaluations, providerColors, status }: Evaluations
           })}
         </div>
       )}
-      {evaluations.length === 0 && (
-        <p className="phase-progress-text">
-          {status === 'Running' ? 'Evaluation is in progress. Please wait...' : 'Waiting for evaluation...'}
-        </p>
+      {status !== 'Done' && (
+        <div className="typing-dots">
+          <span />
+          <span />
+          <span />
+        </div>
       )}
     </>
   )

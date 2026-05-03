@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react'
+
 export type Provider = 'openai' | 'anthropic' | 'google'
 
 export type ProviderRank = Record<Provider, number>
 
 export type ProviderColorMap = Record<Provider, string>
 
-export type ProviderIconMap = Record<Provider, string>
+export type ProviderIconMap = Record<Provider, ReactNode>
 
 export interface ResponseItem {
   provider: Provider
