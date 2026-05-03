@@ -1,4 +1,21 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: colosseum-postgres
+    environment:
+      POSTGRES_USER: colosseum
+      POSTGRES_PASSWORD: colosseum
+      POSTGRES_DB: colosseum
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colosseum"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -8,6 +25,11 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://colosseum:colosseum@postgres:5432/colosseum
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 10s
@@ -25,4 +47,7 @@ services:
       - ./config:/config:ro
     depends_on:
       - backend
+
+volumes:
+  postgres_data:
 

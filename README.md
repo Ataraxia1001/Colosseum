@@ -7,7 +7,7 @@ Colosseum is a multi-LLM chat arena. One prompt is sent to OpenAI, Claude, and G
 ## Stack
 
 - **Frontend:** React + TypeScript + Vite
-- **Backend:** LangGraph, LangSmith, DeepEval, FastAPI, Pydantic
+- **Backend:** LangGraph, LangSmith, DeepEval, FastAPI, Pydantic, PostgreSQL, SQLAlchemy
 - **AI Providers:** OpenAI, Anthropic Claude, Google Gemini
 
 ## Project structure
@@ -55,7 +55,7 @@ Both phases are orchestrated by a LangGraph `StateGraph`, and the backend expose
 
 ## LangGraph
 
-<img src="./backend/arena_graph/artifacts/chat_graph.png" alt="Arena Graph" width="700" />
+<img src="./backend/lang_graph/artifacts/chat_graph.png" alt="Lang Graph" width="700" />
 
 ## 1. Running with Docker Compose (recommended)
 

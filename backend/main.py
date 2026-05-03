@@ -1,15 +1,27 @@
-from llm import llm_clients
+import asyncio
 import json
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+
+from lang_graph import chat_graph
+from db.crud import save_chat_summary
+from db.database import create_tables
+from llm import llm_clients
 from schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
-from arena_graph import chat_graph
 from utils import build_chat_config
 
 
-app = FastAPI(title='Multi LLM MVP API')
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_tables()
+    yield
+
+
+app = FastAPI(title='Multi LLM MVP API', lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +53,8 @@ async def chat(request: ChatRequest) -> dict:
     summary: SummaryResult | None = result.get('summary')
 
     llm_clients.initial_opinion = normalized
+
+    asyncio.create_task(save_chat_summary(message, summary))
 
     return {
         'responses': normalized,
@@ -112,6 +126,8 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 'summary': aggregated_summary,
             }
             yield f"data: {json.dumps(jsonable_encoder(done_event))}\n\n"
+
+            asyncio.create_task(save_chat_summary(message, aggregated_summary))
 
         except Exception as exc:
             error_event = {

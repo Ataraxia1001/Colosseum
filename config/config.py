@@ -34,11 +34,17 @@ class LangSmithConfig:
 
 
 @dataclass(frozen=True)
+class DatabaseConfig:
+    url: str | None
+
+
+@dataclass(frozen=True)
 class AppConfig:
     models: ModelConfig
     gemini: GeminiConfig
     deepeval: DeepEvalConfig
     langsmith: LangSmithConfig
+    database: DatabaseConfig
 
 
 _DEFAULT_CONFIG: dict[str, Any] = {
@@ -58,7 +64,9 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     'langsmith': {
         'tracing': True,
         'project': 'colosseum',
-        'endpoint': 'https://api.smith.langchain.com',
+    },
+    'database': {
+        'url': None,
     },
 }
 
@@ -104,6 +112,10 @@ def _load_raw_config() -> dict[str, Any]:
             **_DEFAULT_CONFIG['langsmith'],
             **(loaded.get('langsmith') or {}),
         },
+        'database': {
+            **_DEFAULT_CONFIG['database'],
+            **(loaded.get('database') or {}),
+        },
     }
 
 
@@ -126,6 +138,7 @@ def get_config() -> AppConfig:
     gemini_raw = raw.get('gemini', {})
     deepeval_raw = raw.get('deepeval', {})
     langsmith_raw = raw.get('langsmith', {})
+    database_raw = raw.get('database', {})
 
     timeout_override_raw = deepeval_raw.get(
         'per_attempt_timeout_seconds_override',
@@ -158,6 +171,9 @@ def get_config() -> AppConfig:
             tracing=_as_bool(langsmith_raw.get('tracing'), _DEFAULT_CONFIG['langsmith']['tracing']),
             project=str(langsmith_raw.get('project', _DEFAULT_CONFIG['langsmith']['project'])),
             endpoint=str(langsmith_raw.get('endpoint', _DEFAULT_CONFIG['langsmith']['endpoint'])),
+        ),
+        database=DatabaseConfig(
+            url=database_raw.get('url') or None,
         ),
     )
 
