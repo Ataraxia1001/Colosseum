@@ -4,6 +4,10 @@
 
 Colosseum is a multi-LLM chat arena. One prompt is sent to OpenAI, Claude, and Gemini in parallel, each model gives an initial answer, then each model critiques the other two. Finally, all three responses and critiques are evaluated and compared, and a summary with a winner is generated. Results are displayed side by side in a React UI backed by FastAPI and LangGraph. Chat summaries are persisted to PostgreSQL.
 
+## Demo
+
+https://github.com/user-attachments/assets/3f322899-5acf-4cbd-b2ba-ee9770baa122
+
 ## Stack
 
 - **Frontend:** React + TypeScript + Vite

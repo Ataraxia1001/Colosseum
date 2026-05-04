@@ -55,7 +55,7 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     },
     'gemini': {
         'timeout_seconds': 30,
-        'max_retries': 3,
+        'max_retries': 5,
         'retry_backoff_seconds': 1.0,
     },
     'deepeval': {
