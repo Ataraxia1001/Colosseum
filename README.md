@@ -19,17 +19,18 @@ Colosseum/
 │   ├── config.py              # Config loader with validation
 │   └── config.yaml            # Runtime config (models, timeouts, DB, etc.)
 ├── backend/
-│   ├── main.py                # FastAPI app with lifespan setup
-│   ├── config_loader.py       # Path setup for config imports
-│   ├── schemas.py             # Pydantic models
-│   ├── utils.py               # Utilities
+│   ├── app/                   # Application package
+│   │   ├── config_loader.py   # Path setup for config imports
+│   │   ├── main.py            # FastAPI app with lifespan setup
+│   │   ├── schemas.py         # Pydantic models
+│   │   ├── utils.py           # Utilities
+│   │   ├── db/                # Database (SQLAlchemy models, ORM, CRUD)
+│   │   ├── lang_graph/        # LangGraph orchestration
+│   │   └── llm/               # LLM clients and evaluation
 │   ├── pyproject.toml         # Dependencies (uv)
 │   ├── .env                   # API keys (copy from .env.example)
 │   ├── .env.example           # Template for .env
-│   ├── Dockerfile
-│   ├── db/                    # Database (SQLAlchemy models, ORM, CRUD)
-│   ├── lang_graph/            # LangGraph orchestration
-│   └── llm/                   # LLM clients and evaluation
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx            # Root component with milestone-based auto-scroll
@@ -200,7 +201,7 @@ DATABASE_URL=postgresql+asyncpg://colosseum:colosseum@localhost:5432/colosseum
 **Step 5 — Start the backend:**
 
 ```bash
-uv run uvicorn main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 Backend listens on http://localhost:8000.  
