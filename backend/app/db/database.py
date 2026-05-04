@@ -1,9 +1,12 @@
+import logging
 import os
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from ..config_loader import get_config
 from .models import Base
+
+logger = logging.getLogger(__name__)
 
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
@@ -45,9 +48,12 @@ def get_session_factory() -> async_sessionmaker[AsyncSession] | None:
 
 
 async def create_tables() -> None:
-    """Create all tables if they don't exist. No-op when DATABASE_URL is not set."""
+    """Create all tables if they don't exist. No-op when DATABASE_URL is not set or unreachable."""
     engine = get_engine()
     if engine is None:
         return
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as exc:
+        logger.warning("Database unavailable — skipping table creation: %s", exc)

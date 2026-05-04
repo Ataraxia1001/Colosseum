@@ -64,6 +64,7 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     'langsmith': {
         'tracing': True,
         'project': 'colosseum',
+        'endpoint': 'https://api.smith.langchain.com',
     },
     'database': {
         'url': None,

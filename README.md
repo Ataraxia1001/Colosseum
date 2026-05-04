@@ -80,7 +80,7 @@ All phases are orchestrated by a LangGraph `StateGraph`, and the backend streams
 
 ## LangGraph
 
-<img src="./backend/lang_graph/artifacts/chat_graph.png" alt="Lang Graph" width="700" />
+<img src="./backend/app/lang_graph/artifacts/chat_graph.png" alt="Lang Graph" width="700" />
 
 ## 1. Running with Docker Compose (recommended)
 
@@ -152,6 +152,45 @@ If containers are already built, restart without rebuilding:
 ```bash
 docker compose up
 ```
+
+## 1.1 Expose the app with ngrok (remote testing/demo)
+
+Use ngrok when you want to share your local Colosseum UI with someone outside your machine/network.
+
+**Step 1 - Start Colosseum locally (Docker):**
+
+```bash
+docker compose up --build
+```
+
+Keep this terminal running.
+
+**Step 2 - Open a second terminal and create a tunnel to the frontend:**
+
+```bash
+ngrok http 5173
+```
+
+ngrok prints a public HTTPS URL like:
+
+```text
+https://shorty-siamese-concert.ngrok-free.dev
+```
+
+Open that URL in a browser. Requests go to your local Vite frontend (`localhost:5173`), and frontend API calls are still proxied to backend (`localhost:8000`) through Vite's `/api` proxy.
+
+**Why this works in this project:**
+- `frontend/vite.config.ts` uses `server.host: true`, so Vite listens on all interfaces.
+- `frontend/vite.config.ts` uses `server.allowedHosts: ['.ngrok-free.dev']`, so ngrok hosts are allowed.
+- `frontend/vite.config.ts` proxies `/api` to backend, so your UI can call FastAPI without CORS setup during dev.
+
+**Troubleshooting:**
+- If browser shows "Blocked request. This host is not allowed", verify `server.allowedHosts` in `frontend/vite.config.ts` and restart the frontend container/server.
+- If tunnel opens but app cannot load data, check backend health at `http://localhost:8000/health`.
+- If ngrok URL changes, no config update is needed as long as it ends with `.ngrok-free.dev`.
+
+**Optional (stable URL):**
+On paid ngrok plans, reserve a domain and reuse a fixed URL for demos/webhooks.
 
 ## 2. Manual setup — Backend
 

@@ -25,8 +25,9 @@ async def generate_summary(
 ) -> SummaryResult:
     winner, is_tie = _compute_winner_and_tie(evaluations)
 
+    _display_name = {'anthropic': 'Claude', 'google': 'Gemini', 'openai': 'OpenAI'}
     opinions = '\n\n'.join(
-        f'### {r.provider.capitalize()}\n{r.content}'
+        f'### {_display_name.get(r.provider, r.provider.capitalize())}\n{r.content}'
         for r in responses
         if r.content
     )
