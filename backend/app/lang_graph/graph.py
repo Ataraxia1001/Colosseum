@@ -17,12 +17,12 @@ try:
         gemini_evaluation_node,
         summary_node,
     )
-    from utils import save_graph_image
+    from ..utils import save_graph_image
 except ImportError:
     backend_dir = Path(__file__).resolve().parents[1]
     if str(backend_dir) not in sys.path:
         sys.path.insert(0, str(backend_dir))
-    from nodes import (
+    from app.lang_graph.nodes import (
         ChatState,
         openai_node,
         claude_node,
@@ -35,7 +35,7 @@ except ImportError:
         gemini_evaluation_node,
         summary_node,
     )
-    from utils import save_graph_image
+    from app.utils import save_graph_image
 
 
 graph = StateGraph(ChatState)

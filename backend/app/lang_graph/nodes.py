@@ -3,8 +3,8 @@ from typing import Annotated, Callable, Coroutine, Any
 
 from typing_extensions import TypedDict
 
-from schemas import CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
-from llm.llm_clients import (
+from ..schemas import CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
+from ..llm.llm_clients import (
     ANTHROPIC_MODEL,
     GEMINI_MODEL,
     OPENAI_MODEL,
@@ -12,9 +12,9 @@ from llm.llm_clients import (
     call_gemini,
     call_openai,
 )
-from llm.eval import _evaluate_metrics, _evaluate_pairwise
-from llm.summary import generate_summary
-from utils import _build_critique_prompt
+from ..llm.eval import _evaluate_metrics, _evaluate_pairwise
+from ..llm.summary import generate_summary
+from ..utils import _build_critique_prompt
 
 
 class ChatState(TypedDict):

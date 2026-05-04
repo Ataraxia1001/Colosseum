@@ -1,8 +1,8 @@
 import logging
 
-from db.database import get_session_factory
-from db.models import ChatSession
-from schemas import SummaryResult
+from .database import get_session_factory
+from .models import ChatSession
+from ..schemas import SummaryResult
 
 logger = logging.getLogger(__name__)
 

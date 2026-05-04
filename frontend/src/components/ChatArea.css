@@ -422,7 +422,7 @@
   font-size: 14px;
   color: #e6b800;
   font-weight: 700;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   letter-spacing: 0.12em;
   padding: 12px 16px;
   background: linear-gradient(135deg, rgba(139, 69, 19, 0.4), rgba(184, 134, 11, 0.2));

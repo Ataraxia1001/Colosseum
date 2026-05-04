@@ -3,8 +3,8 @@ import os
 from typing import Any
 import httpx
 
-from config_loader import get_config
-from schemas import ModelResponse
+from ..config_loader import get_config
+from ..schemas import ModelResponse
 
 _CONFIG = get_config()
 

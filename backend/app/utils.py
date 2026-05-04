@@ -1,8 +1,8 @@
 from pathlib import Path
 from uuid import uuid4
 
-from config_loader import get_config
-from schemas import ModelResponse
+from .config_loader import get_config
+from .schemas import ModelResponse
 
 
 _CONFIG = get_config()

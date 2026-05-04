@@ -2,7 +2,7 @@ import asyncio
 import os
 from collections.abc import Iterable
 
-from config_loader import get_config
+from ..config_loader import get_config
 
 _CONFIG = get_config()
 if _CONFIG.deepeval.per_attempt_timeout_seconds_override is not None:
@@ -24,7 +24,7 @@ from .llm_clients import (
     OPENAI_API_KEY,
     OPENAI_MODEL,
 )
-from schemas import CritiqueResponse, EvaluationResult, ModelResponse
+from ..schemas import CritiqueResponse, EvaluationResult, ModelResponse
 
 
 PROVIDER_LABELS = {

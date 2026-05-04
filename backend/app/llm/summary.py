@@ -1,7 +1,7 @@
 from collections import Counter
 
-from schemas import EvaluationResult, ModelResponse, SummaryResult
-from llm.llm_clients import call_openai
+from ..schemas import EvaluationResult, ModelResponse, SummaryResult
+from .llm_clients import call_openai
 
 
 def _compute_winner_and_tie(evaluations: list[EvaluationResult]) -> tuple[str | None, bool]:

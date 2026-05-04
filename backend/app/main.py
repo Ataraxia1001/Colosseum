@@ -7,12 +7,12 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.app.lang_graph import chat_graph
-from backend.app.db.crud import save_chat_summary
-from backend.app.db.database import create_tables
-from backend.app.llm import llm_clients
-from backend.app.schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
-from backend.app.utils import build_chat_config
+from .lang_graph import chat_graph
+from .db.crud import save_chat_summary
+from .db.database import create_tables
+from .llm import llm_clients
+from .schemas import ChatRequest, CritiqueResponse, EvaluationResult, ModelResponse, SummaryResult
+from .utils import build_chat_config
 
 
 @asynccontextmanager
